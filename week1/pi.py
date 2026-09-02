@@ -17,4 +17,4 @@ def estimate_pi(n, seed):
         if x * x + y * y <= 1.0:
             inside_points += 1
 
-    return  inside_points / n
+    return 4.0*inside_points / n
