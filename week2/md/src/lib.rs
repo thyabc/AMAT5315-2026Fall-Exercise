@@ -5,7 +5,8 @@ pub fn greeting() -> &'static str {
 
 /// Lennard-Jones pair energy in reduced units, for separation `r > 0`.
 pub fn energy(r: f64) -> f64 {
-    unimplemented!("energy at {r}")
+    let inv_r6 = r.recip().powi(6);
+    4.0 * (inv_r6 * inv_r6 - inv_r6)
 }
 
 /// Radial pair force in reduced units, for separation `r > 0`.
