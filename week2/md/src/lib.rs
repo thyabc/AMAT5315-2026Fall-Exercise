@@ -12,7 +12,9 @@ pub fn energy(r: f64) -> f64 {
 /// Radial pair force in reduced units, for separation `r > 0`.
 /// Positive values indicate repulsion; negative values indicate attraction.
 pub fn force(r: f64) -> f64 {
-    unimplemented!("force at {r}")
+    let inv_r = r.recip();
+    let inv_r6 = inv_r.powi(6);
+    24.0 * inv_r * (2.0 * inv_r6 * inv_r6 - inv_r6)
 }
 
 #[cfg(test)]
