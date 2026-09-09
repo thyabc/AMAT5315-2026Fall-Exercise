@@ -1,32 +1,78 @@
+use crate::{Boundary, PairPotential};
+#[cfg(test)]
 use crate::{energy, force};
 
-/// Unit-mass particles in two dimensions, with open boundaries and plain LJ forces.
+/// Unit-mass particles in two dimensions with configurable pair geometry.
 /// State is private to keep the acceleration cache consistent with positions.
 #[derive(Clone, Debug)]
 pub struct System {
     pub(crate) positions: Vec<[f64; 2]>,
     pub(crate) velocities: Vec<[f64; 2]>,
     pub(crate) accelerations: Vec<[f64; 2]>,
+    boundary: Boundary,
+    potential: PairPotential,
 }
 
 impl System {
     pub fn new(positions: Vec<[f64; 2]>, velocities: Vec<[f64; 2]>) -> Self {
-        assert_eq!(positions.len(), velocities.len());
-        assert!(
-            positions
-                .iter()
-                .chain(&velocities)
-                .flatten()
-                .all(|x| x.is_finite())
-        );
+        Self::with_settings(positions, velocities, Boundary::OPEN, PairPotential::PLAIN)
+            .expect("invalid particle state")
+    }
+
+    pub fn with_settings(
+        mut positions: Vec<[f64; 2]>,
+        velocities: Vec<[f64; 2]>,
+        boundary: Boundary,
+        potential: PairPotential,
+    ) -> Result<Self, String> {
+        if positions.len() != velocities.len() {
+            return Err("position and velocity counts differ".into());
+        }
+        if !positions
+            .iter()
+            .chain(&velocities)
+            .flatten()
+            .all(|x| x.is_finite())
+        {
+            return Err("particle state must be finite".into());
+        }
+        if let (Some(lengths), Some(rc)) = (boundary.lengths(), potential.cutoff()) {
+            if lengths.iter().any(|l| rc > 0.5 * l) {
+                return Err("cutoff must not exceed half the shortest box length".into());
+            }
+        }
+        for x in &mut positions {
+            *x = boundary.wrap(*x);
+        }
+        for i in 0..positions.len() {
+            for j in i + 1..positions.len() {
+                let d = boundary.displacement(positions[i], positions[j]);
+                let r = d[0].hypot(d[1]);
+                if r <= 0.0 || !r.is_finite() || !potential.force(r).is_finite() {
+                    return Err("invalid or overlapping particle positions".into());
+                }
+            }
+        }
         let accelerations = vec![[0.0; 2]; positions.len()];
         let mut system = Self {
             positions,
             velocities,
             accelerations,
+            boundary,
+            potential,
         };
         system.update_accelerations();
-        system
+        Ok(system)
+    }
+
+    pub fn boundary(&self) -> Boundary {
+        self.boundary
+    }
+
+    pub(crate) fn wrap_positions(&mut self) {
+        for x in &mut self.positions {
+            *x = self.boundary.wrap(*x);
+        }
     }
 
     pub fn n_atoms(&self) -> usize {
@@ -54,9 +100,10 @@ impl System {
         let mut potential = 0.0;
         for i in 0..self.n_atoms() {
             for j in i + 1..self.n_atoms() {
-                let dx = self.positions[i][0] - self.positions[j][0];
-                let dy = self.positions[i][1] - self.positions[j][1];
-                potential += energy(dx.hypot(dy));
+                let d = self
+                    .boundary
+                    .displacement(self.positions[i], self.positions[j]);
+                potential += self.potential.energy(d[0].hypot(d[1]));
             }
         }
         potential
@@ -78,16 +125,15 @@ impl System {
         self.accelerations.fill([0.0; 2]);
         for i in 0..self.n_atoms() {
             for j in i + 1..self.n_atoms() {
-                let d = [
-                    self.positions[i][0] - self.positions[j][0],
-                    self.positions[i][1] - self.positions[j][1],
-                ];
+                let d = self
+                    .boundary
+                    .displacement(self.positions[i], self.positions[j]);
                 let r = d[0].hypot(d[1]);
                 assert!(
                     r > 0.0 && r.is_finite(),
                     "pair separation must be finite and positive"
                 );
-                let scale = force(r) / r;
+                let scale = self.potential.force(r) / r;
                 for (axis, displacement) in d.into_iter().enumerate() {
                     let acceleration = scale * displacement;
                     self.accelerations[i][axis] += acceleration;

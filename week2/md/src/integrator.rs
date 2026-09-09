@@ -26,6 +26,7 @@ impl Integrator for Euler {
                 v[axis] += dt * a[axis];
             }
         }
+        system.wrap_positions();
         system.update_accelerations();
     }
 }
@@ -47,6 +48,7 @@ impl Integrator for VelocityVerlet {
             }
         }
         // One new force evaluation; retain these accelerations for the next step.
+        system.wrap_positions();
         system.update_accelerations();
         for (v, a) in system.velocities.iter_mut().zip(&system.accelerations) {
             for axis in 0..2 {

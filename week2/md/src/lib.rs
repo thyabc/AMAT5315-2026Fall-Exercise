@@ -1,6 +1,16 @@
+mod boundary;
 mod experiment;
+mod fluid;
+mod initialization;
 mod integrator;
+mod potential;
 mod system;
+mod thermostat;
+
+pub use boundary::Boundary;
+pub use fluid::FluidConfig;
+pub use initialization::initialize_fluid;
+pub use potential::PairPotential;
 
 pub use experiment::{EnergySample, run_dimer};
 pub use integrator::{Euler, Integrator, VelocityVerlet, advance};
