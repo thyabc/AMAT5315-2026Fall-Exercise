@@ -1,3 +1,11 @@
+mod experiment;
+mod integrator;
+mod system;
+
+pub use experiment::{EnergySample, run_dimer};
+pub use integrator::{Euler, Integrator, VelocityVerlet, advance};
+pub use system::System;
+
 /// Returns the program's greeting.
 pub fn greeting() -> &'static str {
     "Hello, world!"

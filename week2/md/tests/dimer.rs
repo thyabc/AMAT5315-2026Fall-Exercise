@@ -1,10 +1,13 @@
-use md::{Euler, EnergySample, VelocityVerlet, run_dimer};
+use md::{EnergySample, Euler, VelocityVerlet, run_dimer};
 
 fn maximum_error(samples: &[EnergySample]) -> f64 {
     for sample in samples {
         assert!(sample.relative_error.is_finite());
     }
-    samples.iter().map(|s| s.relative_error.abs()).fold(0.0, f64::max)
+    samples
+        .iter()
+        .map(|s| s.relative_error.abs())
+        .fold(0.0, f64::max)
 }
 
 #[test]
