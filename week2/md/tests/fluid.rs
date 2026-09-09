@@ -27,10 +27,8 @@ fn shifted_cutoff_is_energy_continuous_and_uses_plain_force_inside() {
         assert_eq!(potential.force(r), 0.0);
     }
     let h = 1e-6;
-    close(
-        potential.force(1.3),
-        -(potential.energy(1.3 + h) - potential.energy(1.3 - h)) / (2.0 * h),
-    );
+    let numerical = -(potential.energy(1.3 + h) - potential.energy(1.3 - h)) / (2.0 * h);
+    assert!((potential.force(1.3) - numerical).abs() < 1e-8);
     assert!(PairPotential::shifted(f64::NAN).is_err());
 }
 

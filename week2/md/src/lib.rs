@@ -8,7 +8,7 @@ mod system;
 mod thermostat;
 
 pub use boundary::Boundary;
-pub use fluid::FluidConfig;
+pub use fluid::{FluidConfig, Phase, simulate};
 pub use initialization::initialize_fluid;
 pub use potential::PairPotential;
 

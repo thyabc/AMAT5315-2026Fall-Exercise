@@ -1,4 +1,30 @@
 use serde::{Deserialize, Serialize};
+use crate::{System, VelocityVerlet, advance, initialize_fluid};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Phase { Equilibration, Production }
+
+/// Observers borrow the state. Only production frames are marked for recording.
+pub fn simulate(
+    config: &FluidConfig,
+    mut observe: impl FnMut(Phase, usize, &System, bool) -> Result<(), String>,
+) -> Result<(), String> {
+    let mut system = initialize_fluid(config)?;
+    for step in 1..=config.equilibration_steps {
+        advance(&VelocityVerlet, &mut system, config.dt);
+        system.rescale_temperature(config.temperature)?;
+        observe(Phase::Equilibration, step, &system, false)?;
+    }
+    for step in 0..=config.production_steps {
+        if step > 0 { advance(&VelocityVerlet, &mut system, config.dt); }
+        if !system.positions().iter().chain(system.velocities()).chain(system.accelerations()).flatten().all(|x| x.is_finite()) {
+            return Err(format!("nonfinite production state at step {step}; reduce dt"));
+        }
+        let frame = step % config.sample_every == 0 || step == config.production_steps;
+        observe(Phase::Production, step, &system, frame)?;
+    }
+    Ok(())
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
