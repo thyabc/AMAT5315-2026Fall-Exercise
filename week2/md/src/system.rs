@@ -1,4 +1,4 @@
-use crate::{Boundary, PairPotential};
+use crate::{Boundary, PairPotential, cell::CellList};
 #[cfg(test)]
 use crate::{energy, force};
 
@@ -11,6 +11,7 @@ pub struct System {
     pub(crate) accelerations: Vec<[f64; 2]>,
     boundary: Boundary,
     potential: PairPotential,
+    cell_list: CellList,
 }
 
 impl System {
@@ -60,7 +61,8 @@ impl System {
             accelerations,
             boundary,
             potential,
-        };
+            cell_list: CellList::new([10,10],2.5),        
+       };
         system.update_accelerations();
         Ok(system)
     }

@@ -1,13 +1,23 @@
 use md::{Observable, assess};
 
 fn fixture() -> (Vec<Observable>, Vec<f64>) {
-    let samples = (0..101).map(|step| Observable { step, time: step as f64 * 0.005,
-        kinetic: 99.0, potential: -300.0, total: -201.0, temperature: 1.0 }).collect();
+    let samples = (0..101)
+        .map(|step| Observable {
+            step,
+            time: step as f64 * 0.005,
+            kinetic: 99.0,
+            potential: -300.0,
+            total: -201.0,
+            temperature: 1.0,
+        })
+        .collect();
     // Deterministic quantiles of the exact reference CDF, not random data.
-    let speeds = (0..1000).map(|i| {
-        let p = (i as f64 + 0.5) / 1000.0;
-        (-2.0 * 0.99 * (1.0 - p).ln()).sqrt()
-    }).collect();
+    let speeds = (0..1000)
+        .map(|i| {
+            let p = (i as f64 + 0.5) / 1000.0;
+            (-2.0 * 0.99 * (1.0 - p).ln()).sqrt()
+        })
+        .collect();
     (samples, speeds)
 }
 
@@ -16,12 +26,19 @@ fn checker_passes_reference_and_rejects_each_physical_failure() {
     let (samples, speeds) = fixture();
     assert!(assess(&samples, &speeds, 100, 1.0).unwrap().passed());
     let mut drifting = samples.clone();
-    for s in &mut drifting { s.total += s.step as f64 * 0.02; s.potential = s.total - s.kinetic; }
+    for s in &mut drifting {
+        s.total += s.step as f64 * 0.02;
+        s.potential = s.total - s.kinetic;
+    }
     let report = assess(&drifting, &speeds, 100, 1.0).unwrap();
     assert!(!report.energy_pass);
     assert!((report.energy_slope - 4.0).abs() < 1e-10);
     let mut hot = samples.clone();
-    for s in &mut hot { s.temperature = 1.2; s.kinetic = 118.8; s.total = s.kinetic + s.potential; }
+    for s in &mut hot {
+        s.temperature = 1.2;
+        s.kinetic = 118.8;
+        s.total = s.kinetic + s.potential;
+    }
     assert!(!assess(&hot, &speeds, 100, 1.0).unwrap().temperature_pass);
     assert!(!assess(&samples, &[1.0; 1000], 100, 1.0).unwrap().speed_pass);
 }
@@ -51,11 +68,20 @@ fn prescribed_equilibrium_fluid_passes_all_checks() {
                 speeds.extend(system.velocities().iter().map(|v| v[0].hypot(v[1])));
             }
             for axis in 0..2 {
-                assert!(system.velocities().iter().map(|v| v[axis]).sum::<f64>().abs() < 1e-9);
+                assert!(
+                    system
+                        .velocities()
+                        .iter()
+                        .map(|v| v[axis])
+                        .sum::<f64>()
+                        .abs()
+                        < 1e-9
+                );
             }
         }
         Ok(())
-    }).unwrap();
+    })
+    .unwrap();
     assert_eq!(frame_count, 201);
     assert_eq!(samples.len(), 10001);
     let report = assess(&samples, &speeds, 100, 1.0).unwrap();

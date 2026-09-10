@@ -1,11 +1,19 @@
 mod boundary;
+mod check;
 mod experiment;
 mod fluid;
 mod initialization;
 mod integrator;
 mod potential;
 mod system;
+mod cell;
 mod thermostat;
+mod trajectory;
+mod video;
+pub use video::render_video;
+
+pub use check::{CheckReport, assess};
+pub use trajectory::{Metadata, Observable, RecordedRun, read_run, record_run};
 
 pub use boundary::Boundary;
 pub use fluid::{FluidConfig, Phase, simulate};

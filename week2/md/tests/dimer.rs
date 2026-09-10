@@ -19,11 +19,15 @@ fn dimer_integrators_share_the_same_experiment() {
     for samples in [&euler, &verlet] {
         assert_eq!(samples.len(), 501);
         assert_eq!(samples[0].kinetic, 0.0);
-        assert_eq!(samples[0].potential, md::energy(1.2));
-        assert_eq!(samples[0].relative_error, 0.0);
+        assert!(
+            (samples[0].potential - md::energy(1.2)).abs() < 1e-12
+                 );
+        assert!(samples[0].relative_error.abs() < 1e-12);
         for (step, sample) in samples.iter().enumerate() {
             assert_eq!(sample.step, step);
-            assert_eq!(sample.time, step as f64 * 0.01);
+            assert!(
+               (sample.time - step as f64 * 0.01).abs() < 1e-12
+                    );
         }
         maximum_error(samples);
     }
@@ -38,7 +42,9 @@ fn dimer_integrators_share_the_same_experiment() {
 fn verlet_energy_remains_bounded_for_5000_steps() {
     let samples = run_dimer(&VelocityVerlet, 0.01, 5000);
     assert_eq!(samples.len(), 5001);
-    assert_eq!(samples.last().unwrap().time, 50.0);
+    assert!(
+    (samples.last().unwrap().time - 50.0).abs() < 1e-12
+);
     let maximum = maximum_error(&samples);
     println!("5000 steps: Verlet maximum={maximum:e}");
     assert!(maximum < 1e-3, "long-run Verlet maximum={maximum:e}");

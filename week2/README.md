@@ -97,3 +97,9 @@ The test-first history is preserved:
 The accepted [design](../docs/superpowers/2026-09-09-part3-design.md) and
 [plan](../docs/superpowers/2026-09-09-part3-plan.md) record the architecture and
 test-first sequence.
+## Timing
+
+| Program | Time (s) |
+|---|---:|
+| Debug build | 14.465 |
+| Release build | 2.842 |

@@ -55,7 +55,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         .x_label_area_size(52)
         .y_label_area_size(75)
         .build_cartesian_2d(0.0..50.0, -0.5..0.5)?;
-    right.configure_mesh()
+    right
+        .configure_mesh()
         .x_desc("Time t")
         .y_desc("Relative energy error x 1000")
         .axis_desc_style(("sans-serif", 18))
@@ -63,7 +64,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         .light_line_style(RGBColor(235, 235, 235))
         .draw()?;
     right.draw_series(LineSeries::new(
-        long_verlet.iter().map(|s| (s.time, 1000.0 * s.relative_error)),
+        long_verlet
+            .iter()
+            .map(|s| (s.time, 1000.0 * s.relative_error)),
         blue.stroke_width(1),
     ))?;
     root.present()?;
