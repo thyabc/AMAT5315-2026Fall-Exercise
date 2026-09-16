@@ -1,0 +1,31 @@
+usage       = "ising --update metropolis --l 64 --t-from 1.5 --t-to 3.5 --t-step 0.05 --discard 2000 --measure 200 --every 20 --seed 2026 --out runs/ramp"
+description = "sample the Ising model along a temperature ramp; no unstated defaults"
+
+[args]
+update = "metropolis or wolff; one step is an l*l-proposal sweep or one cluster flip"
+l      = "lattice side"
+
+t-from = "lowest temperature; the ramp ascends from here, from an all-up lattice"
+t-to   = "highest temperature"
+t-step = "temperature step; each temperature starts from the previous lattice"
+
+discard = "equilibration steps discarded at each temperature"
+measure = "measured steps at each temperature"
+seed    = "random seed; one random stream per run, carried through the ramp"
+every   = "measured steps between recorded frames; 0, the default, records none"
+
+out = "output folder"
+
+[writes]
+stdout = """a header, then one tab-separated line per temperature:
+    T, mean |M| over the measured steps, then the acceptance rate (metropolis),
+    accepted flips per proposal, or the mean cluster size (wolff)"""
+
+"<out>/run.json" = """L, update, t_grid, discard, measure, seed, sample_every = 1,
+    time_unit = sweep for metropolis or cluster_flip for wolff"""
+
+"<out>/series.jsonl" = """one object per measured step: L, T, sweep, M, E; 6 decimals;
+    wolff rows add cluster_size, the spins flipped in that move"""
+
+"<out>/spins.jsonl" = "frames when every > 0; one object each: L, T, sweep, m, spins"
+
