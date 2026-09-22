@@ -2,7 +2,7 @@ use std::f64::consts::PI;
 use std::fs::{File, create_dir_all};
 use std::io::{BufWriter, Write};
 
-use week4::integrator::{Euler, Integrator, Midpoint, Rk4};
+use week4::integrator::{Integrator, Rk4};
 use week4::line::{DerivativeMethod, LineProblem, periodic_grid};
 
 fn complex_growth(integrator: &dyn Integrator, re_lambda: f64, im_lambda: f64) -> f64 {
