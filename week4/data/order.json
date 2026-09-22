@@ -1,0 +1,425 @@
+{
+ "configuration": {
+  "case": "taylor-green",
+  "n": 8,
+  "nu": 0.5,
+  "t_end": 2,
+  "every": 2,
+  "dts": [
+   0.4,
+   0.25,
+   0.2
+  ],
+  "why": "z = 2 nu dt must sit in [0.2, 0.5]: below 0.2 the RK4 error at t_end is under 10x the 6-decimal storage floor, above 0.5 forward Euler and the midpoint rule are outside their asymptotic range and their fitted slopes leave the 15% band. Only a non-halving series fits; the largest step keeps every method inside its stability interval (retained |k|^2_max = 8 at n = 8: Euler limit dt = 0.5, RK4 0.696). n = 16 is out: its corner mode |k|^2 = 50 is past RK4's limit at dt = 0.4."
+ },
+ "table": {
+  "euler": [
+   {
+    "dt": 0.4,
+    "code": 0,
+    "t": 2.0,
+    "err_6dec": 0.42542502957654826,
+    "err_full_from_stdout_E": 0.42542699774715265,
+    "cmd": "field taylor-green --n 8 | fluid --method euler --nu 0.5 --dt 0.4 --t-end 2 --every 2 --out runs/c-T2-3pt-euler-dt0.4"
+   },
+   {
+    "dt": 0.25,
+    "code": 0,
+    "t": 2.0,
+    "err_6dec": 0.2602590858295531,
+    "err_full_from_stdout_E": 0.2602600545488891,
+    "cmd": "field taylor-green --n 8 | fluid --method euler --nu 0.5 --dt 0.25 --t-end 2 --every 2 --out runs/c-T2-3pt-euler-dt0.25"
+   },
+   {
+    "dt": 0.2,
+    "code": 0,
+    "t": 2.0,
+    "err_6dec": 0.20660688185991788,
+    "err_full_from_stdout_E": 0.20660614266958743,
+    "cmd": "field taylor-green --n 8 | fluid --method euler --nu 0.5 --dt 0.2 --t-end 2 --every 2 --out runs/c-T2-3pt-euler-dt0.2"
+   }
+  ],
+  "rk2": [
+   {
+    "dt": 0.4,
+    "code": 0,
+    "t": 2.0,
+    "err_6dec": 0.07432213978403493,
+    "err_full_from_stdout_E": 0.07431966980704008,
+    "cmd": "field taylor-green --n 8 | fluid --method rk2 --nu 0.5 --dt 0.4 --t-end 2 --every 2 --out runs/c-T2-3pt-rk2-dt0.4"
+   },
+   {
+    "dt": 0.25,
+    "code": 0,
+    "t": 2.0,
+    "err_6dec": 0.025439133291729556,
+    "err_full_from_stdout_E": 0.025437526409968214,
+    "cmd": "field taylor-green --n 8 | fluid --method rk2 --nu 0.5 --dt 0.25 --t-end 2 --every 2 --out runs/c-T2-3pt-rk2-dt0.25"
+   },
+   {
+    "dt": 0.2,
+    "code": 0,
+    "t": 2.0,
+    "err_6dec": 0.015608825699853597,
+    "err_full_from_stdout_E": 0.015611214228990145,
+    "cmd": "field taylor-green --n 8 | fluid --method rk2 --nu 0.5 --dt 0.2 --t-end 2 --every 2 --out runs/c-T2-3pt-rk2-dt0.2"
+   }
+  ],
+  "rk4": [
+   {
+    "dt": 0.4,
+    "code": 0,
+    "t": 2.0,
+    "err_6dec": 0.0005986617291886084,
+    "err_full_from_stdout_E": 0.0005965287812488285,
+    "cmd": "field taylor-green --n 8 | fluid --method rk4 --nu 0.5 --dt 0.4 --t-end 2 --every 2 --out runs/c-T2-3pt-rk4-dt0.4"
+   },
+   {
+    "dt": 0.25,
+    "code": 0,
+    "t": 2.0,
+    "err_6dec": 7.879896208145736e-05,
+    "err_full_from_stdout_E": 8.023569508353035e-05,
+    "cmd": "field taylor-green --n 8 | fluid --method rk4 --nu 0.5 --dt 0.25 --t-end 2 --every 2 --out runs/c-T2-3pt-rk4-dt0.25"
+   },
+   {
+    "dt": 0.2,
+    "code": 0,
+    "t": 2.0,
+    "err_6dec": 3.574223820158995e-05,
+    "err_full_from_stdout_E": 3.151575698123743e-05,
+    "cmd": "field taylor-green --n 8 | fluid --method rk4 --nu 0.5 --dt 0.2 --t-end 2 --every 2 --out runs/c-T2-3pt-rk4-dt0.2"
+   }
+  ]
+ },
+ "slopes": {
+  "euler": {
+   "slope_6dec": 1.0425620002213378,
+   "slope_full": 1.0425723051970661
+  },
+  "rk2": {
+   "slope_6dec": 2.256011296643617,
+   "slope_full": 2.2557939411133052
+  },
+  "rk4": {
+   "slope_6dec": 4.104406178667299,
+   "slope_full": 4.246453912617402
+  }
+ },
+ "error_full_precision_note": "err_full_from_stdout_E = |sqrt(E / E_exact) - 1| from the stdout energy at full precision; for Taylor-Green (one Fourier mode) this equals the relative L2 field error exactly, since the whole field scales by one factor",
+ "brief_candidate": {
+  "n": 8,
+  "nu": 0.5,
+  "t_end": 4,
+  "dts": [
+   0.4,
+   0.2,
+   0.1
+  ],
+  "table": {
+   "euler": [
+    {
+     "dt": 0.4,
+     "code": 0,
+     "t": 4.0,
+     "err_6dec": 0.6698537996233097,
+     "err_full_from_stdout_E": 0.6698658650821495,
+     "cmd": "field taylor-green --n 8 | fluid --method euler --nu 0.5 --dt 0.4 --t-end 4 --every 4 --out runs/c-brief-euler-dt0.4"
+    },
+    {
+     "dt": 0.2,
+     "code": 0,
+     "t": 4.0,
+     "err_6dec": 0.3705333170007893,
+     "err_full_from_stdout_E": 0.3705261871503698,
+     "cmd": "field taylor-green --n 8 | fluid --method euler --nu 0.5 --dt 0.2 --t-end 4 --every 4 --out runs/c-brief-euler-dt0.2"
+    },
+    {
+     "dt": 0.1,
+     "code": 0,
+     "t": 4.0,
+     "err_6dec": 0.19298856442254006,
+     "err_full_from_stdout_E": 0.19299113554121183,
+     "cmd": "field taylor-green --n 8 | fluid --method euler --nu 0.5 --dt 0.1 --t-end 4 --every 4 --out runs/c-brief-euler-dt0.1"
+    }
+   ],
+   "rk2": [
+    {
+     "dt": 0.4,
+     "code": 0,
+     "t": 4.0,
+     "err_6dec": 0.15418207996592614,
+     "err_full_from_stdout_E": 0.15416275293430748,
+     "cmd": "field taylor-green --n 8 | fluid --method rk2 --nu 0.5 --dt 0.4 --t-end 4 --every 4 --out runs/c-brief-rk2-dt0.4"
+    },
+    {
+     "dt": 0.2,
+     "code": 0,
+     "t": 4.0,
+     "err_6dec": 0.0314813288455573,
+     "err_full_from_stdout_E": 0.031466138467684424,
+     "cmd": "field taylor-green --n 8 | fluid --method rk2 --nu 0.5 --dt 0.2 --t-end 4 --every 4 --out runs/c-brief-rk2-dt0.2"
+    },
+    {
+     "dt": 0.1,
+     "code": 0,
+     "t": 4.0,
+     "err_6dec": 0.00723803497999968,
+     "err_full_from_stdout_E": 0.007212474212546338,
+     "cmd": "field taylor-green --n 8 | fluid --method rk2 --nu 0.5 --dt 0.1 --t-end 4 --every 4 --out runs/c-brief-rk2-dt0.1"
+    }
+   ],
+   "rk4": [
+    {
+     "dt": 0.4,
+     "code": 0,
+     "t": 4.0,
+     "err_6dec": 0.0012104214328488175,
+     "err_full_from_stdout_E": 0.0011934134090845205,
+     "cmd": "field taylor-green --n 8 | fluid --method rk4 --nu 0.5 --dt 0.4 --t-end 4 --every 4 --out runs/c-brief-rk4-dt0.4"
+    },
+    {
+     "dt": 0.2,
+     "code": 0,
+     "t": 4.0,
+     "err_6dec": 6.185475427202637e-05,
+     "err_full_from_stdout_E": 6.303250720463005e-05,
+     "cmd": "field taylor-green --n 8 | fluid --method rk4 --nu 0.5 --dt 0.2 --t-end 4 --every 4 --out runs/c-brief-rk4-dt0.2"
+    },
+    {
+     "dt": 0.1,
+     "code": 0,
+     "t": 4.0,
+     "err_6dec": 1.523356113985782e-05,
+     "err_full_from_stdout_E": 3.623377353267898e-06,
+     "cmd": "field taylor-green --n 8 | fluid --method rk4 --nu 0.5 --dt 0.1 --t-end 4 --every 4 --out runs/c-brief-rk4-dt0.1"
+    }
+   ]
+  },
+  "slopes": {
+   "euler": {
+    "slope_6dec": 0.897665444298834,
+    "slope_full": 0.8976688269546377
+   },
+   "rk2": {
+    "slope_6dec": 2.206446602737889,
+    "slope_full": 2.208908086931868
+   },
+   "rk4": {
+    "slope_6dec": 3.1560561946099477,
+    "slope_full": 4.181771557499407
+   }
+  }
+ },
+ "brief_candidate_verdict": "fails: RK4 at dt 0.1 reads 1.52e-5 from the 6-decimal frames against a true 3.6e-6 (floor), 6-decimal slope 3.16 (full precision 4.18)",
+ "alternatives": {
+  "brief": {
+   "dts": [
+    0.4,
+    0.2,
+    0.1
+   ],
+   "nu": 0.5,
+   "t_end": 4,
+   "n": 8,
+   "slopes": {
+    "euler": {
+     "slope_6dec": 0.897665444298834,
+     "slope_full": 0.8976688269546377
+    },
+    "rk2": {
+     "slope_6dec": 2.206446602737889,
+     "slope_full": 2.208908086931868
+    },
+    "rk4": {
+     "slope_6dec": 3.1560561946099477,
+     "slope_full": 4.181771557499407
+    }
+   }
+  },
+  "T2-3pt": {
+   "dts": [
+    0.4,
+    0.25,
+    0.2
+   ],
+   "nu": 0.5,
+   "t_end": 2,
+   "n": 8,
+   "slopes": {
+    "euler": {
+     "slope_6dec": 1.0425620002213378,
+     "slope_full": 1.0425723051970661
+    },
+    "rk2": {
+     "slope_6dec": 2.256011296643617,
+     "slope_full": 2.2557939411133052
+    },
+    "rk4": {
+     "slope_6dec": 4.104406178667299,
+     "slope_full": 4.246453912617402
+    }
+   }
+  },
+  "T2-4pt": {
+   "dts": [
+    0.5,
+    0.4,
+    0.25,
+    0.2
+   ],
+   "nu": 0.5,
+   "t_end": 2,
+   "n": 8,
+   "slopes": {
+    "euler": {
+     "slope_6dec": 1.0449935181739367,
+     "slope_full": 1.0449955521264929
+    },
+    "rk2": {
+     "slope_6dec": 2.289722394201882,
+     "slope_full": 2.2895983139654286
+    },
+    "rk4": {
+     "slope_6dec": 4.175016564638904,
+     "slope_full": 4.274158794297726
+    }
+   }
+  },
+  "T4-halving": {
+   "dts": [
+    0.4,
+    0.25,
+    0.125
+   ],
+   "nu": 0.5,
+   "t_end": 4,
+   "n": 8,
+   "slopes": {
+    "euler": {
+     "slope_6dec": 0.8890942599511432,
+     "slope_full": 0.8890838854906765
+    },
+    "rk2": {
+     "slope_6dec": 2.227265975106885,
+     "slope_full": 2.2258706570885676
+    },
+    "rk4": {
+     "slope_6dec": 3.728400386112332,
+     "slope_full": 4.1950955756589146
+    }
+   }
+  },
+  "nu025-T8": {
+   "dts": [
+    0.8,
+    0.5,
+    0.25
+   ],
+   "nu": 0.25,
+   "t_end": 8,
+   "n": 8,
+   "slopes": {
+    "euler": {
+     "slope_6dec": 0.88909425995114,
+     "slope_full": 0.8890838854906737
+    },
+    "rk2": {
+     "slope_6dec": 2.22726597510688,
+     "slope_full": 2.225870657088563
+    },
+    "rk4": {
+     "slope_6dec": 3.728400386112324,
+     "slope_full": 4.195095575658909
+    }
+   }
+  },
+  "T2-3pt-n16": {
+   "dts": [
+    0.4,
+    0.25,
+    0.2
+   ],
+   "nu": 0.5,
+   "t_end": 2,
+   "n": 16,
+   "slopes": {
+    "euler": {
+     "slope_6dec": 1.0425867328769722,
+     "slope_full": 1.0425723051970637
+    },
+    "rk2": {
+     "slope_6dec": 2.2560348567343604,
+     "slope_full": 2.2557939411102783
+    },
+    "rk4": {
+     "slope_6dec": 3.394219041054061,
+     "slope_full": 4.246046553270317
+    }
+   }
+  }
+ },
+ "contract_run_rk4": {
+  "cmd": "field taylor-green --n 64 | fluid --method rk4 --nu 0.1 --dt 0.01 --t-end 1 --every 0.1 --out runs/c-contract",
+  "err_6dec": 7.038586527871464e-07,
+  "err_full_from_stdout_E": 2.020605904817785e-14,
+  "E": 0.1675800115089166,
+  "t": 1.0
+ },
+ "provenance": "fixtures/week4-reference-rust (Rust answer key, state truncated to the 2/3 set), commands relative to that crate with target/release on PATH; stdout t E Z at full precision, fields.jsonl at 6 decimals; order runs: field taylor-green --n 8 | fluid --method <m> --nu 0.5 --dt <dt> --t-end 2 --every 2 --out <dir>; err_6dec recomputed from the last fields.jsonl frame with the checker's taylor-green-field formula",
+ "checker_placeholder_config": {
+  "n": 8,
+  "nu": 0.5,
+  "t_end": 1,
+  "dts": [
+   0.5,
+   0.25,
+   0.2
+  ],
+  "table": {
+   "euler": {
+    "err6": [
+     0.3204289572107127,
+     0.13991898958112153,
+     0.10927293003652204
+    ],
+    "errfull": [
+     0.3204295428852387,
+     0.13991864021413025,
+     0.10927341045053995
+    ],
+    "slope6": 1.1791645110133098,
+    "slopefull": 1.179163858233091
+   },
+   "rk2": {
+    "err6": [
+     0.0618296342469276,
+     0.01263990973450121,
+     0.007776250916731425
+    ],
+    "errfull": [
+     0.06182883924181448,
+     0.012638892404379432,
+     0.007775378856315518
+    ],
+    "slope6": 2.269281381313624,
+    "slopefull": 2.2693871778028667
+   },
+   "rk4": {
+    "err6": [
+     0.0007914550668653145,
+     3.8922888796553484e-05,
+     1.5873897197472287e-05
+    ],
+    "errfull": [
+     0.0007921155138697067,
+     4.01170428530051e-05,
+     1.575775433670934e-05
+    ],
+    "slope6": 4.285232645225825,
+    "slopefull": 4.281952660625465
+   }
+  },
+  "verdict": "measured on the same crate: slopes (6-decimal frames) Euler 1.179, RK2 2.269, RK4 4.285; Euler is 18% off (outside the 15% band) and RK4's smallest error 1.59e-5 sits 1.6x above the 1e-5 requirement; the chosen configuration (t_end 2, dt 0.4/0.25/0.2) reads 1.043/2.256/4.104 with RK4's smallest error 3.57e-5. Checker constants to change: ORDER_T_END = 2.0, ORDER_DTS = (0.4, 0.25, 0.2)."
+ }
+}

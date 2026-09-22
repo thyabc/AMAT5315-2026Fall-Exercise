@@ -1,0 +1,462 @@
+#!/usr/bin/env python3
+"""Week-4 checker: 2D incompressible flow from a Fourier pseudospectral solver.
+
+The physics gate: a correct vorticity-streamfunction solver on the periodic square
+reproduces the closed-form Taylor-Green decay, and the explicit integrator it claims
+to use has the order and the stability limit that stability function predicts. Every
+line below is one a student verifies for themselves in the learning sheet.
+
+  * taylor-green-* -- accuracy against the exact solution. Its nonlinear term is
+                   identically zero, so these are accuracy checks, not teeth on
+                   advection.
+  * order       -- three committed RK4 Taylor-Green runs at ORDER_DTS must show a
+                   fourth-order refinement: the fitted slope of log(error) vs log(dt)
+                   must be >= 3.5. An RK2 stepper labelled rk4 gives ~2.3.
+  * unstable    -- one committed RK4 Taylor-Green run at a step above the predicted
+                   diffusive limit must actually blow up. A solver that clamps its
+                   step, filters, or integrates diffusion exactly never does.
+
+CONTRACT
+--------
+Required raw artifacts (produced by `make reproduce` in the student repo):
+    artifacts/taylor-green/run.json, artifacts/taylor-green/fields.jsonl
+    artifacts/random/run.json,       artifacts/random/fields.jsonl
+    artifacts/order/<dir>/{run.json,fields.jsonl}    x3: Taylor-Green, RK4, one per ORDER_DTS
+    artifacts/unstable/taylor-green/{run.json,fields.jsonl}  RK4 past the diffusive limit
+
+    run.json keys: case, n, nu, dt, t_end, snapshot_every, seed, k_band, method
+                   (method is one of euler|rk2|rk4; every run the gate reads is rk4)
+    fields.jsonl : one JSON object per snapshot with keys t, step, u, v, omega;
+                   u, v, omega are row-major lists of n*n floats (idx = iy*n + ix,
+                   x_i = 2*pi*i/n on [0, 2pi)^2). A run that hits a non-finite energy
+                   stops there and writes only the frames before it.
+
+The checker recomputes the energy E = <u^2+v^2>/2 from the raw `u` and `v`; the
+stored `omega` column is only checked for shape and then ignored, as is anything the
+crate printed.
+
+CHECKS (in order; schema dies at once, every physics line prints before the verdict)
+    1. schema              : all files exist and parse; run.json carries all keys and
+                             method in {euler, rk2, rk4}; n a power of two; `case`
+                             matches its directory; every frame has t, step, u, v,
+                             omega with n^2 entries; frame count ==
+                             round(t_end/snapshot_every) + 1 (the unstable run may
+                             stop early); the contract runs are rk4:
+                             taylor-green n >= 64, nu == 0.1, t_end == 1.0;
+                             random n >= 128, nu == 0.004, t_end == 10.0;
+                             random seed == $SEED when the gate supplies one;
+                             the three order runs: taylor-green, rk4, n == ORDER_N,
+                             nu == ORDER_NU, t_end == ORDER_T_END, dt in ORDER_DTS,
+                             each dt exactly once; the unstable run: taylor-green,
+                             rk4, same n and nu as the contract Taylor-Green.
+    2. taylor-green-field  : relative L2 error of (u, v) at t_end
+    3. taylor-green-energy : |E - (1/4)e^{-4 nu t}| / ((1/4)e^{-4 nu t})
+    4. order               : least-squares slope of log(Taylor-Green field error at
+                             t_end) against log(dt) over the three order runs
+                             (the taylor-green-field error, per run)  <- teeth #1
+    5. unstable            : the unstable run's dt must exceed the predicted RK4
+                             diffusive limit 2.7853 / (nu |k|^2_max), |k|^2_max the
+                             largest |k|^2 under the two-thirds rule for its n, AND the
+                             run must blow up: its frames end before t_end (the run
+                             stopped at a non-finite energy) or E(last)/E(0) >= 10.
+                             Measured = E(last)/E(0), inf when it stopped.  <- teeth #2
+
+Exit 0 and print PASS on success; exit 1 and print `FAIL: <check>: <reason>` on a
+failed physics check; exit 2 on a contract error (missing artifact / bad schema).
+Every check prints `measured = ... (required <op> ...) PASS|FAIL`.
+
+STDLIB ONLY -- the gate CI job installs no numpy for the checker.
+"""
+import json
+import math
+import os
+import sys
+
+# --- tolerances -----------------------------------------------------------------
+# The Taylor-Green lines are calibrated against the answer key (fixtures/week4-
+# reference-rust) and the negative controls week4-euler and week4-gradient so that
+# every gate sits >=10x above the key and >=10x below the control it catches. The
+# order and unstable lines and the ORDER_* / UNSTABLE constants below are
+# PLACEHOLDERS measured on the NumPy baseline (fixtures/week4-reference) and its
+# controls week4-rk2-as-rk4 and week4-stabilized; the instructor freezes them once
+# the Rust answer key has measured the order series and the blow-up visibility time.
+TOLS = {
+    # Key 7.0e-7, entirely the storage floor (the solver's own error is ~1e-13).
+    # 1e-5 so a student storing 5 decimals is not failed for it.
+    "taylor-green-field":  ("<",  1e-5),
+    # Energy is quadratic, so the storage noise averages out. Key: 9.6e-8.
+    "taylor-green-energy": ("<",  1e-6),
+    # Refinement slope of the three RK4 order runs from the 6-decimal frames. Rust
+    # answer key 4.10 (week4/data/order.json), NumPy reference 4.10; week4-rk2-as-rk4
+    # 2.26, a wrong field (week4-gradient) ~0. PLACEHOLDER: 0.6 of slope above the
+    # key, 1.2 below the RK2 control.
+    "order":               (">=", 3.5),
+    # Blow-up: E(last)/E(0) of the unstable run, inf when the run stopped at a
+    # non-finite energy. Rust answer key and NumPy reference at dt = 0.04 (1.27x the
+    # limit): stopped at t = 2.0 of 4; week4-stabilized 0.20. PLACEHOLDER.
+    "unstable":            (">=", 10.0),
+}
+
+# --- order series (line 4) -------------------------------------------------------
+# The configuration the Rust answer key measured and chose (week4/data/order.json,
+# 2026-09-19): z = 2 nu dt must sit in [0.2, 0.5] -- below 0.2 the RK4 error at
+# t_end from the 6-decimal frames approaches the storage floor (RK4 errors 6.0e-4,
+# 7.9e-5, 3.6e-5 against a floor of 4.6e-6), above 0.5 Euler and RK2 leave their
+# asymptotic range -- and nu |k|^2_max dt <= 2.0 at the largest step (n = 8 keeps
+# |k| <= 2, |k|^2_max = 8), so Euler and RK2 runs of the same series are stable too.
+# The design brief's candidate (t_end = 4, dt 0.4/0.2/0.1) sinks the smallest-step
+# error into the floor and reads slope 3.16 for a correct RK4: rejected.
+ORDER_N = 8
+ORDER_NU = 0.5
+ORDER_DTS = (0.4, 0.25, 0.2)
+ORDER_T_END = 2.0
+ORDER_DIR = "order"
+
+# --- blow-up run (line 5) ---------------------------------------------------------
+UNSTABLE_DIR = os.path.join("unstable", "taylor-green")
+# Classical RK4 has |R(z)| <= 1 on the negative real axis for -2.7853 <= z <= 0. The
+# stiffest retained mode of the linear diffusion term has z = -nu |k|^2_max dt, so
+# the predicted limit is dt_crit = RK4_REAL_LIMIT / (nu |k|^2_max).
+RK4_REAL_LIMIT = 2.7853
+
+# --- locked artifact contract ---------------------------------------------------
+CASES = ("taylor-green", "random")
+N_MIN = {"taylor-green": 64, "random": 128}
+NU_REQ = {"taylor-green": 0.1, "random": 4e-3}
+T_END_REQ = {"taylor-green": 1.0, "random": 10.0}
+RUN_KEYS = ("case", "n", "nu", "dt", "t_end", "snapshot_every", "seed", "k_band",
+            "method")
+METHODS = ("euler", "rk2", "rk4")
+FRAME_KEYS = ("t", "step", "u", "v", "omega")
+
+
+def die(name, reason, code=1):
+    print(f"FAIL: {name}: {reason}")
+    sys.exit(code)
+
+
+def fmt_tol(tol):
+    """1e-03 for the small relative tolerances, 0.2 / 3.5 / 10 for the O(1) ones."""
+    return f"{tol:g}" if tol >= 0.1 else f"{tol:.0e}"
+
+
+# =================================================================================
+# One pass over a run: parse, validate, and recompute every per-frame quantity.
+# =================================================================================
+def kmax2_two_thirds(n):
+    """Largest |k|^2 the two-thirds rule retains on an n x n grid.
+
+    The rule (reference sim.py: `mask = |kx| < n/3 & |ky| < n/3`; Rust answer key:
+    `|kx| <= n/3 & |ky| <= n/3` with integer n/3) keeps |kx|, |ky| <= floor(n/3) for
+    every power-of-two n, so the corner mode (kmax, kmax) sets |k|^2_max = 2 kmax^2.
+    n = 64: kmax = 21, |k|^2_max = 882.  n = 8: kmax = 2, |k|^2_max = 8.
+    """
+    kmax = n // 3
+    return kmax, 2 * kmax * kmax
+
+
+def rk4_diffusive_limit(nu, n):
+    """dt_crit = 2.7853 / (nu |k|^2_max): the largest step with |R(z)| <= 1 on the
+    stiffest retained diffusive mode z = -nu |k|^2_max dt."""
+    return RK4_REAL_LIMIT / (nu * kmax2_two_thirds(n)[1])
+
+
+def load_case(repo, subdir, expect, seed_expect=None, allow_stop=False):
+    """Parse artifacts/<subdir>/{run.json,fields.jsonl}, enforce `expect`, recompute.
+
+    expect keys (all optional): case, method, n_min, n, nu, t_end, dt_set.
+    allow_stop=True accepts a run that ends before t_end (it stopped at a non-finite
+    energy); every stored frame must still be finite.
+    """
+    label = "artifacts/" + subdir.replace(os.sep, "/")
+    d = os.path.join(repo, "artifacts", subdir)
+    run_path, fields_path = os.path.join(d, "run.json"), os.path.join(d, "fields.jsonl")
+    for p in (run_path, fields_path):
+        if not os.path.isfile(p):
+            die("schema", f"required raw artifact not found: {label}/{os.path.basename(p)} "
+                          f"(did `make reproduce` run?) [{p}]", code=2)
+    try:
+        with open(run_path) as fh:
+            run = json.load(fh)
+    except (ValueError, OSError) as e:
+        die("schema", f"{label}/run.json did not parse as JSON: {e}", code=2)
+
+    missing = [k for k in RUN_KEYS if k not in run]
+    if missing:
+        die("schema", f"{label}/run.json missing required keys: {missing}", code=2)
+    case = run["case"]
+    if "case" in expect and case != expect["case"]:
+        die("schema", f"{label}/run.json says case = {case!r} (required "
+                      f"{expect['case']!r} in this directory)", code=2)
+    method = run["method"]
+    if method not in METHODS:
+        die("schema", f"{label}/run.json method = {method!r} (required one of "
+                      f"{list(METHODS)})", code=2)
+    if "method" in expect and method != expect["method"]:
+        die("schema", f"{label}: method = {method!r} (required {expect['method']!r}: "
+                      f"this run must be integrated with classical RK4)", code=2)
+    n = run["n"]
+    if not isinstance(n, int) or n & (n - 1) or n < 4:
+        die("schema", f"{label}/run.json n = {n} (required: a power of two >= 4, as "
+                      f"the sheet's conventions box fixes it)", code=2)
+    if "n_min" in expect and n < expect["n_min"]:
+        die("schema", f"{label}: n = {n} (required >= {expect['n_min']})", code=2)
+    if "n" in expect and n != expect["n"]:
+        die("schema", f"{label}: n = {n} (required == {expect['n']})", code=2)
+    nu, t_end, dt = float(run["nu"]), float(run["t_end"]), float(run["dt"])
+    if "nu" in expect and abs(nu - expect["nu"]) > 1e-12:
+        die("schema", f"{label}: nu = {nu:g} (required == {expect['nu']:g})", code=2)
+    if "t_end" in expect and abs(t_end - expect["t_end"]) > 1e-9:
+        die("schema", f"{label}: t_end = {t_end:g} (required == {expect['t_end']:g})",
+            code=2)
+    if dt <= 0:
+        die("schema", f"{label}: dt = {dt:g} (required > 0)", code=2)
+    if "dt_set" in expect and not any(abs(dt - x) <= 1e-9 * max(1.0, x)
+                                      for x in expect["dt_set"]):
+        die("schema", f"{label}: dt = {dt:g} (required one of "
+                      f"{[float(x) for x in expect['dt_set']]}: the order series is fixed "
+                      f"so its slope means one thing)", code=2)
+    snap = float(run["snapshot_every"])
+    if snap <= 0:
+        die("schema", f"{label}: snapshot_every = {snap:g} (required > 0)", code=2)
+    n_expect = int(round(t_end / snap)) + 1
+    if seed_expect is not None and run["seed"] != seed_expect:
+        die("schema", f"{label}: run.json seed = {run['seed']!r} but the gate supplied "
+                      f"SEED={seed_expect}; `make reproduce` must honour the "
+                      f"checker-supplied seed", code=2)
+
+    size = n * n
+    ts, es = [], []
+    last_uv = None
+    nframes = 0
+
+    with open(fields_path) as fh:
+        for ln, line in enumerate(fh, start=1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                fr = json.loads(line)
+            except ValueError as e:
+                die("schema", f"{label}/fields.jsonl line {ln} did not parse: {e}", code=2)
+            for k in FRAME_KEYS:
+                if k not in fr:
+                    die("schema", f"{label}/fields.jsonl line {ln} missing key {k!r} "
+                                  f"(required keys: {list(FRAME_KEYS)})", code=2)
+            u, v, om = fr["u"], fr["v"], fr["omega"]
+            for name, arr in (("u", u), ("v", v), ("omega", om)):
+                if not isinstance(arr, list) or len(arr) != size:
+                    got = len(arr) if isinstance(arr, list) else type(arr).__name__
+                    die("schema", f"{label}/fields.jsonl line {ln}: field {name!r} has "
+                                  f"{got} entries (required n^2 = {size})", code=2)
+            t = float(fr["t"])
+            e = 0.5 * sum(a * a + b * b for a, b in zip(u, v)) / size
+            if not math.isfinite(e):
+                die("schema", f"{label}/fields.jsonl line {ln}: the energy of the stored "
+                              f"frame is not finite; a run stops at the first non-finite "
+                              f"energy and writes only the frames before it", code=2)
+
+            ts.append(t)
+            es.append(e)
+            last_uv = (u, v, t)
+            nframes += 1
+
+    if nframes == 0:
+        die("schema", f"{label}/fields.jsonl holds no frames", code=2)
+    if nframes != n_expect and not (allow_stop and nframes < n_expect):
+        die("schema", f"{label}: fields.jsonl has {nframes} frames (required "
+                      f"round(t_end/snapshot_every) + 1 = round({t_end:g}/{snap:g}) + 1 "
+                      f"= {n_expect})", code=2)
+    return {"case": case, "label": label, "n": n, "nu": nu, "dt": dt, "t_end": t_end,
+            "method": method, "seed": run["seed"], "nframes": nframes,
+            "nframes_expect": n_expect, "ts": ts, "es": es, "last": last_uv}
+
+
+def load_order_runs(repo):
+    """The three RK4 Taylor-Green runs under artifacts/order/<dir>/, one per ORDER_DTS.
+    dt is read from each run.json, never from the directory name."""
+    d = os.path.join(repo, "artifacts", ORDER_DIR)
+    if not os.path.isdir(d):
+        die("schema", f"required raw artifacts not found: artifacts/{ORDER_DIR}/<run>/"
+                      f"{{run.json,fields.jsonl}} for dt in {list(ORDER_DTS)} "
+                      f"(did `make reproduce` write the order series?) [{d}]", code=2)
+    subdirs = sorted(x for x in os.listdir(d) if os.path.isdir(os.path.join(d, x)))
+    if len(subdirs) != len(ORDER_DTS):
+        die("schema", f"artifacts/{ORDER_DIR}/ holds {len(subdirs)} run directories "
+                      f"{subdirs} (required exactly {len(ORDER_DTS)}, one per dt in "
+                      f"{list(ORDER_DTS)})", code=2)
+    expect = {"case": "taylor-green", "method": "rk4", "n": ORDER_N, "nu": ORDER_NU,
+              "t_end": ORDER_T_END, "dt_set": ORDER_DTS}
+    runs = [load_case(repo, os.path.join(ORDER_DIR, x), expect) for x in subdirs]
+    seen = {}
+    for r in runs:
+        key = min(ORDER_DTS, key=lambda x: abs(x - r["dt"]))
+        if key in seen:
+            die("schema", f"{r['label']} and {seen[key]['label']} both have dt = {key:g}; "
+                          f"the order series needs each dt in {list(ORDER_DTS)} once",
+                code=2)
+        seen[key] = r
+    return [seen[x] for x in ORDER_DTS]
+
+
+# =================================================================================
+# The physics quantities assembled from the per-case pass.
+# =================================================================================
+def tg_field_error(c):
+    """Relative L2 error of (u, v) against the exact Taylor-Green field at t_end:
+    u = cos x sin y e^{-2 nu t}, v = -sin x cos y e^{-2 nu t}."""
+    u, v, t = c["last"]
+    n = c["n"]
+    decay = math.exp(-2.0 * c["nu"] * t)
+    num = den = 0.0
+    tau = 2.0 * math.pi
+    cos = [math.cos(tau * i / n) for i in range(n)]
+    sin = [math.sin(tau * i / n) for i in range(n)]
+    for iy in range(n):
+        cy, sy = cos[iy], sin[iy]
+        base = iy * n
+        for ix in range(n):
+            ue = cos[ix] * sy * decay
+            ve = -sin[ix] * cy * decay
+            du, dv = u[base + ix] - ue, v[base + ix] - ve
+            num += du * du + dv * dv
+            den += ue * ue + ve * ve
+    return math.sqrt(num) / math.sqrt(den)
+
+
+def tg_energy_error(c):
+    """|E - (1/4) e^{-4 nu t}| / ((1/4) e^{-4 nu t}) at t_end."""
+    exact = 0.25 * math.exp(-4.0 * c["nu"] * c["ts"][-1])
+    return abs(c["es"][-1] - exact) / exact
+
+
+def order_slope(runs):
+    """Least-squares slope of log(Taylor-Green field error at t_end) vs log(dt) over
+    the order runs; returns (slope, [(dt, error)])."""
+    pts = [(r["dt"], tg_field_error(r)) for r in runs]
+    xs = [math.log(dt) for dt, _ in pts]
+    ys = [math.log(err) if err > 0 else math.log(1e-300) for _, err in pts]
+    xm, ym = sum(xs) / len(xs), sum(ys) / len(ys)
+    sxx = sum((x - xm) ** 2 for x in xs)
+    sxy = sum((x - xm) * (y - ym) for x, y in zip(xs, ys))
+    return sxy / sxx, pts
+
+
+def unstable_growth(c):
+    """E(last)/E(0) of the unstable run; inf when its frames end before t_end (the run
+    stopped at a non-finite energy)."""
+    if c["nframes"] < c["nframes_expect"]:
+        return float("inf")
+    e0 = c["es"][0]
+    return float("inf") if e0 == 0.0 else c["es"][-1] / e0
+
+
+def main():
+    if len(sys.argv) < 2:
+        die("usage", "checker invoked without a student-repo path "
+                     "(usage: check <student-repo>)", code=2)
+    repo = sys.argv[1]
+    seed_env = os.environ.get("SEED")
+    seed_expect = None
+    if seed_env not in (None, ""):
+        try:
+            seed_expect = int(seed_env)
+        except ValueError:
+            die("usage", f"SEED={seed_env!r} is not an integer", code=2)
+
+    print("week4 checker: 2D incompressible flow, Fourier pseudospectral")
+    for case in CASES:
+        print(f"  artifacts: artifacts/{case}/{{run.json,fields.jsonl}}")
+    print(f"  artifacts: artifacts/{ORDER_DIR}/<run>/{{run.json,fields.jsonl}} x{len(ORDER_DTS)}, "
+          f"artifacts/{UNSTABLE_DIR.replace(os.sep, '/')}/{{run.json,fields.jsonl}}")
+    print(f"  spec     : domain [0,2pi)^2, omega = d_x v - d_y u, E = <u^2+v^2>/2; "
+          f"every gated run is method = rk4")
+    print(f"  input    : SEED={seed_expect if seed_expect is not None else '(unset)'}")
+
+    tg = load_case(repo, "taylor-green",
+                   {"case": "taylor-green", "method": "rk4", "n_min": N_MIN["taylor-green"],
+                    "nu": NU_REQ["taylor-green"], "t_end": T_END_REQ["taylor-green"]})
+    rnd = load_case(repo, "random",
+                    {"case": "random", "method": "rk4", "n_min": N_MIN["random"],
+                     "nu": NU_REQ["random"], "t_end": T_END_REQ["random"]},
+                    seed_expect=seed_expect)
+    order = load_order_runs(repo)
+    uns = load_case(repo, UNSTABLE_DIR,
+                    {"case": "taylor-green", "method": "rk4", "n": tg["n"], "nu": tg["nu"]},
+                    allow_stop=True)
+
+    slope, order_pts = order_slope(order)
+    kmax, kmax2 = kmax2_two_thirds(uns["n"])
+    dt_crit = rk4_diffusive_limit(uns["nu"], uns["n"])
+    dt_above = uns["dt"] > dt_crit
+
+    measured = {
+        "schema": None,
+        "taylor-green-field": tg_field_error(tg),
+        "taylor-green-energy": tg_energy_error(tg),
+        "order": slope,
+        "unstable": unstable_growth(uns),
+    }
+
+    print(f"schema: measured = taylor-green n={tg['n']} nu={tg['nu']:g} "
+          f"frames={tg['nframes']} method={tg['method']}, random n={rnd['n']} "
+          f"nu={rnd['nu']:g} frames={rnd['nframes']} seed={rnd['seed']} "
+          f"method={rnd['method']}, order n={ORDER_N} nu={ORDER_NU:g} t_end={ORDER_T_END:g} "
+          f"dt={[r['dt'] for r in order]} method=rk4, unstable n={uns['n']} "
+          f"nu={uns['nu']:g} dt={uns['dt']:g} method={uns['method']} "
+          f"(required == the artifact contract) PASS")
+
+    failed = None
+    for name, (op, tol) in TOLS.items():
+        m = measured[name]
+        if name == "order":
+            print("  order: " + ", ".join(f"dt={dt:g} error={err:.3e}"
+                                          for dt, err in order_pts))
+        if name == "unstable":
+            if uns["nframes"] < uns["nframes_expect"]:
+                seen = (f"frames stored {uns['nframes']} of {uns['nframes_expect']}, "
+                        f"last at t={uns['ts'][-1]:g} < t_end={uns['t_end']:g}: the run "
+                        f"stopped at a non-finite energy")
+            else:
+                seen = (f"all {uns['nframes']} frames stored to t_end={uns['t_end']:g}: "
+                        f"E(0)={uns['es'][0]:.3e}, E(t_end)={uns['es'][-1]:.3e}")
+            print(f"  unstable: two-thirds rule at n={uns['n']} keeps |k|<={kmax}, "
+                  f"|k|^2_max={kmax2}; predicted RK4 limit dt_crit = {RK4_REAL_LIMIT}/"
+                  f"(nu |k|^2_max) = {dt_crit:.4g}; run dt = {uns['dt']:g} "
+                  f"({uns['dt'] / dt_crit:.2f}x the limit, "
+                  f"{'above' if dt_above else 'NOT above'}); {seen}")
+        ok = (m >= tol) if op == ">=" else (m < tol)
+        if name == "unstable" and not dt_above:
+            ok = False
+        print(f"{name}: measured = {m:.6e} (required {op} {fmt_tol(tol)}) "
+              f"{'PASS' if ok else 'FAIL'}")
+        if not ok and failed is None:
+            failed = (name, m, op, tol)
+
+    if failed is not None:
+        name, m, op, tol = failed
+        why = {
+            "taylor-green-field": "the field is off the exact Taylor-Green solution "
+                                  "u = cos x sin y e^{-2 nu t}, v = -sin x cos y "
+                                  "e^{-2 nu t}",
+            "taylor-green-energy": "the Taylor-Green energy is off the exact decay "
+                                   "(1/4) e^{-4 nu t}",
+            "order": "the Taylor-Green error of the three runs labelled rk4 does not "
+                     "fall as dt^4: the stepper is not classical RK4 (an RK2 stepper "
+                     "gives a slope near 2, a wrong field a slope near 0)",
+            "unstable": ("the run's dt does not exceed the predicted RK4 diffusive "
+                         "limit; a blow-up must be shown at a step the stability "
+                         "function forbids" if not dt_above else
+                         "a classical RK4 run above its diffusive limit must blow up "
+                         "(frames ending before t_end, or E(t_end) >= 10 E(0)); a "
+                         "stepper that never does is clamping, filtering or "
+                         "integrating diffusion exactly, and is not the RK4 it claims"),
+        }[name]
+        die(name, f"measured = {m:.6e} (required {op} {fmt_tol(tol)}) -- {why}")
+
+    print("PASS")
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

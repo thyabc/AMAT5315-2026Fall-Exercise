@@ -1,0 +1,1 @@
+{"t": 5.0, "n": 128, "nu": 0.004, "seed": 2026, "pad": 0.22, "core_positive": [0.6172, 0.6406], "core_negative": [0.07031, 0.8203], "streamline": [0.9922, 0.03125], "edge_row": 0.8281, "tile_half": 0.08754}

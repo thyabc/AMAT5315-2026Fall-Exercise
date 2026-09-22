@@ -1,0 +1,229 @@
+{
+ "source": "fixtures/week4-reference-rust/scripts/line_measure.py (Rust answer key; the numbers the sheet quotes)",
+ "toy": {
+  "n": 64,
+  "c": 1.0,
+  "sigma": 0.35,
+  "x0": 1.5707963267948966,
+  "t_end": 6.0,
+  "grown": 2.0,
+  "scan_step": 0.0005
+ },
+ "stability": [
+  {
+   "method": "rk4",
+   "nu": 0.05,
+   "h_diffusive": 0.0544004,
+   "h_advective": 0.0883875,
+   "h_region": 0.0493861,
+   "predicted": 0.0544004,
+   "binds": "diffusive",
+   "largest_stable": 0.053,
+   "smallest_unstable": 0.0535,
+   "max_u_at_t_end": {
+    "0.0530": 1.619,
+    "0.0535": 361.9
+   },
+   "scanned": [
+    0.0325,
+    0.109
+   ],
+   "outermost_mode": [
+    {
+     "h": 0.045,
+     "k": 31,
+     "abs_R": 0.6131,
+     "visible_after_t": null
+    },
+    {
+     "h": 0.0535,
+     "k": 31,
+     "abs_R": 1.486,
+     "visible_after_t": 4.98
+    },
+    {
+     "h": 0.056,
+     "k": 31,
+     "abs_R": 1.85,
+     "visible_after_t": 3.35
+    }
+   ],
+   "blowup_at_panel_steps": [
+    {
+     "h": 0.045,
+     "t_exceeds_2": null,
+     "dominant_k": null,
+     "max_u_at_t_end": 0.4122,
+     "stopped_at_t": null
+    },
+    {
+     "h": 0.056,
+     "t_exceeds_2": 3.584,
+     "dominant_k": 31,
+     "max_u_at_t_end": 1083000000000.0,
+     "stopped_at_t": null
+    }
+   ],
+   "blowup_at_1.03_predicted": {
+    "h": 0.0560324,
+    "t_exceeds_2": 3.5860737499999997,
+    "dominant_k": 31,
+    "max_u_at_t_end": 889300000000.0,
+    "stopped_at_t": null
+   },
+   "blowup_at_smallest_unstable": {
+    "h": 0.0535,
+    "t_exceeds_2": 5.2965,
+    "dominant_k": 31,
+    "max_u_at_t_end": 361.9,
+    "stopped_at_t": null
+   }
+  },
+  {
+   "method": "rk4",
+   "nu": 0.002,
+   "h_diffusive": 1.36001,
+   "h_advective": 0.0883875,
+   "h_region": 0.0941036,
+   "predicted": 0.0883875,
+   "binds": "advective",
+   "largest_stable": 0.102,
+   "smallest_unstable": 0.1025,
+   "max_u_at_t_end": {
+    "0.1020": 1.133,
+    "0.1025": 4.117
+   },
+   "scanned": [
+    0.053,
+    0.177
+   ],
+   "outermost_mode": [
+    {
+     "h": 0.045,
+     "k": 31,
+     "abs_R": 0.8851,
+     "visible_after_t": null
+    },
+    {
+     "h": 0.0535,
+     "k": 31,
+     "abs_R": 0.8146,
+     "visible_after_t": null
+    },
+    {
+     "h": 0.056,
+     "k": 31,
+     "abs_R": 0.7845,
+     "visible_after_t": null
+    }
+   ],
+   "blowup_at_1.03_predicted": {
+    "h": 0.0910391,
+    "t_exceeds_2": null,
+    "dominant_k": null,
+    "max_u_at_t_end": 0.9124,
+    "stopped_at_t": null
+   },
+   "blowup_at_smallest_unstable": {
+    "h": 0.1025,
+    "t_exceeds_2": 6.047499999999999,
+    "dominant_k": 31,
+    "max_u_at_t_end": 2.075,
+    "stopped_at_t": null
+   }
+  },
+  {
+   "method": "euler",
+   "nu": 0.05,
+   "h_diffusive": 0.0390625,
+   "h_region": 0.0293902,
+   "predicted": 0.0390625,
+   "binds": "diffusive",
+   "largest_stable": 0.034,
+   "smallest_unstable": 0.0345,
+   "max_u_at_t_end": {
+    "0.0340": 0.5724,
+    "0.0345": 2.697
+   },
+   "scanned": [
+    0.023,
+    0.0785
+   ]
+  },
+  {
+   "method": "rk2",
+   "nu": 0.05,
+   "h_diffusive": 0.0390625,
+   "h_region": 0.0381951,
+   "predicted": 0.0390625,
+   "binds": "diffusive",
+   "largest_stable": 0.0415,
+   "smallest_unstable": 0.042,
+   "max_u_at_t_end": {
+    "0.0415": 1.204,
+    "0.0420": 22.97
+   },
+   "scanned": [
+    0.023,
+    0.0785
+   ]
+  }
+ ],
+ "race": {
+  "nu": 0.002,
+  "sigma": 0.25,
+  "t_end": 6.283185307179586,
+  "h_rk4": 0.02,
+  "h_euler": 0.005,
+  "max_error": {
+   "fourier_rk4": 1.8037034590578926e-05,
+   "fd_rk4": 0.3108419026060607,
+   "fourier_euler": 0.20995783506661325
+  }
+ },
+ "order": {
+  "nu": 0.05,
+  "sigma": 0.35,
+  "t_end": 1.0,
+  "h": [
+   0.02,
+   0.01,
+   0.005,
+   0.0025
+  ],
+  "error": {
+   "euler": [
+    0.037204481842241566,
+    0.01786718033991197,
+    0.008762182799326834,
+    0.004339657748648085
+   ],
+   "rk2": [
+    0.0007052270178775633,
+    0.0001753088704364858,
+    4.366540255573703e-05,
+    1.0893800704736556e-05
+   ],
+   "rk4": [
+    2.920462448541272e-07,
+    1.8180379757204435e-08,
+    1.133198090919052e-09,
+    7.071598862040673e-11
+   ],
+   "rk4-broken": [
+    8.744568138052689e-05,
+    2.176862460145923e-05,
+    5.436640285405581e-06,
+    1.358824033736994e-06
+   ]
+  },
+  "slope": {
+   "euler": 1.0327419519892824,
+   "rk2": 2.005486183765755,
+   "rk4": 4.003952867683772,
+   "rk4-broken": 2.0025332748521785
+  }
+ },
+ "runs": 652,
+ "runtime_s": 4.4
+}

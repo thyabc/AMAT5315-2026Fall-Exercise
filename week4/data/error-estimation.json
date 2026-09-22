@@ -1,0 +1,97 @@
+{
+  "t_end": 2.0,
+  "nu": 0.004,
+  "seed": 2026,
+  "reference": {
+    "n": 256,
+    "dt": 0.0025
+  },
+  "dt_reference": {
+    "n": 128,
+    "dt": 0.0025
+  },
+  "n_list": [
+    32,
+    64,
+    128
+  ],
+  "n_dt": 0.01,
+  "n_errors": [
+    0.5278475006480303,
+    0.12749813630916496,
+    0.007720449588191078
+  ],
+  "dt_n": 128,
+  "dt_list": [
+    0.02,
+    0.0125,
+    0.01
+  ],
+  "dt_errors": [
+    2.2601783346556606e-05,
+    3.4008471584144823e-06,
+    1.3901732627437316e-06
+  ],
+  "dt_slope": 4.02412952432155,
+  "error_estimation": {
+    "quantity": "final vorticity at t = 2",
+    "relative_error": "sqrt(sum((omega - reference)^2) / sum(reference^2))",
+    "grid_comparison": "fine reference sampled at coincident coarse-grid points",
+    "targets": {
+      "same_grid_temporal_error": 5e-06,
+      "agreement_with_finer_grid": 0.01
+    },
+    "richardson": {
+      "n": 128,
+      "coarse_dt": 0.02,
+      "fine_dt": 0.01,
+      "assumed_order": 4,
+      "observed_order": 4.02412952432155,
+      "normalization": "L2 norm of the dt = 0.01 final vorticity",
+      "fine_error_estimate": 1.4162007039203009e-06,
+      "candidate_dt": [
+        0.02,
+        0.0125,
+        0.01
+      ],
+      "predicted_errors": [
+        2.2659211262724814e-05,
+        3.457521249805422e-06,
+        1.4162007039203009e-06
+      ],
+      "scaling": "fine_error_estimate * (candidate_dt / fine_dt)^assumed_order"
+    },
+    "choice": {
+      "n": 128,
+      "dt": 0.0125,
+      "rule": "coarsest passing grid and largest predicted passing time step"
+    },
+    "verification": {
+      "same_grid_reference_dt": 0.0025,
+      "same_grid_temporal_error": 3.4008471584144823e-06,
+      "temporal_target_met": true,
+      "finer_grid_reference": {
+        "n": 256,
+        "dt": 0.0025
+      },
+      "agreement_with_finer_grid": 0.007720486965243842,
+      "grid_target_met": true
+    },
+    "interpretation": [
+      "Richardson assumes a leading fourth-order temporal error at fixed grid.",
+      "Temporal verification measures error against a finer time step on the same grid, not total PDE error.",
+      "The grid criterion measures agreement with a finer reference, not a certified bound on the exact solution.",
+      "Grid comparisons retain temporal error; the selected pair is checked against both references.",
+      "Six-decimal fields impose an approximately 1.5e-7 relative rounding floor; further refinement eventually hides the convergence order."
+    ],
+    "provenance": {
+      "command": "/home/leo/miniconda3/bin/python3 fixtures/week4-reference-rust/scripts/refinement.py --bin fixtures/week4-reference-rust/target/release/fluid --field-bin fixtures/week4-reference-rust/target/release/field --work /tmp/week4-richardson-study --out week4/data/error-estimation.json",
+      "working_directory": "/home/leo/Documents/teaching/AMAT5315-2026Fall",
+      "field_storage_decimals": 6,
+      "initial_modes": {
+        "k_min": 2,
+        "k_max": 6
+      }
+    }
+  }
+}

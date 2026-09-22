@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week 4 — Vorticity field: small vortices merging into big ones</title>
+<style>
+  :root {
+    --bg: #0f1420;
+    --panel: #171d2b;
+    --panel2: #1e2637;
+    --ink: #e8edf6;
+    --muted: #93a1b8;
+    --line: #2c3650;
+    --accent: #6ea8ff;
+    --ens: #f0b849;    /* enstrophy Z */
+    --ene: #56d364;    /* energy E */
+    --tracer: #12ff9a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { padding: 14px 22px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  header h1 { font-size: 1.15rem; margin: 0; font-weight: 650; }
+  header .sub { color: var(--muted); font-size: .85rem; }
+  header .src { margin-left: auto; color: var(--muted); font-size: .8rem;
+    font-variant-numeric: tabular-nums; }
+  main { display: grid; grid-template-columns: repeat(2, minmax(360px, 1fr));
+    gap: 16px; padding: 16px 22px; align-items: start; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px; }
+  .card h2 { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+  canvas { display: block; width: 100%; background: var(--panel2);
+    border-radius: 6px; touch-action: none; }
+  #omcv { image-rendering: pixelated; }
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 10px;
+    flex-wrap: wrap; }
+  button { background: var(--panel2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 12px; cursor: pointer; font: inherit; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #06101f; border-color: var(--accent);
+    font-weight: 650; }
+  button.step { padding: 6px 9px; }
+  input[type=range] { accent-color: var(--accent); }
+  label.ctl { display: flex; align-items: center; gap: 6px; color: var(--muted);
+    font-size: .82rem; white-space: nowrap; }
+  .frameline { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .frameline input[type=range] { flex: 1; }
+  .frameline .fpos { color: var(--muted); font-size: .8rem;
+    font-variant-numeric: tabular-nums; min-width: 120px; text-align: right; }
+  .readouts { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px 14px;
+    margin-top: 10px; }
+  .readouts.no-e { grid-template-columns: repeat(4, 1fr); }
+  .ro { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px;
+    padding: 7px 9px; }
+  .ro .k { color: var(--muted); font-size: .7rem; text-transform: uppercase;
+    letter-spacing: .04em; }
+  .ro .v { font-size: 1.02rem; font-variant-numeric: tabular-nums; margin-top: 1px; }
+  #drop { position: fixed; inset: 0; background: rgba(9,13,22,.92);
+    display: none; align-items: center; justify-content: center; z-index: 50;
+    border: 3px dashed var(--accent); border-radius: 12px; margin: 14px; }
+  #drop.show { display: flex; }
+  #drop .msg { font-size: 1.3rem; color: var(--accent); }
+  #status { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    display: none; background: var(--panel2); border-top: 1px solid var(--line);
+    padding: 8px 22px; color: var(--muted); font-size: .82rem;
+    font-variant-numeric: tabular-nums; }
+  #status.show { display: block; }
+  .empty { grid-column: 1 / -1; text-align: center; padding: 46px 20px;
+    border: 2px dashed var(--line); border-radius: 12px; color: var(--muted);
+    background: var(--panel); }
+  .empty h3 { color: var(--ink); font-size: 1.1rem; margin: 0 0 8px; }
+  .empty code { background: var(--panel2); padding: 1px 6px; border-radius: 4px; }
+  .empty .picker { margin-top: 16px; }
+  .note { color: var(--muted); font-size: .78rem; margin-top: 8px; }
+  .reading { color: var(--ink); font-size: .82rem; margin-top: 8px;
+    font-variant-numeric: tabular-nums; }
+  .legend { display: flex; align-items: center; gap: 8px; color: var(--muted);
+    font-size: .76rem; margin-top: 6px; }
+  .legend .bar { flex: 0 0 130px; height: 11px; border-radius: 2px;
+    border: 1px solid var(--line); }
+  .legend .sw { display: inline-block; width: 11px; height: 11px; border-radius: 2px;
+    border: 1px solid var(--line); vertical-align: -1px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Week 4 — Vorticity field: small vortices merging into big ones</h1>
+  <span class="sub">2D incompressible flow · periodic [0, 2π)² · x right, y up</span>
+  <span class="src" id="src">no data</span>
+</header>
+
+<main id="main">
+  <!-- populated by JS -->
+</main>
+
+<section id="format" class="card" style="margin:0 22px 22px">
+  <h2>Frame format</h2>
+  <p><code>fields.jsonl</code> contains one JSON object per stored snapshot.
+    <code>t</code> is its time, <code>step</code> its integer integration step, and
+    <code>omega</code> an array of N² vorticity values. N is the square root of the
+    array length. Arrays use row-major order, index <code>iy*N + ix</code>, at
+    <code>x = 2π*ix/N</code>, <code>y = 2π*iy/N</code> on the periodic square.
+    The picture has x pointing right and y pointing up.</p>
+  <p>Optional <code>u</code> and <code>v</code> arrays have the same length and layout.
+    Together they supply the energy readout. The course gate needs all three fields;
+    the viewer also accepts an <code>omega</code>-only copy. For the default run,
+    sample every second grid point of the existing 128 × 128 recording to obtain
+    the 64 × 64 viewer copy, keeping every timestamp.</p>
+  <p><code>tracers.jsonl</code> is optional. Each line contains
+    <code>{"t":0.2,"x":[...],"y":[...]}</code>, where <code>t</code> is a number
+    and <code>x</code> and <code>y</code> are equally sized arrays of positions in
+    <code>[0,2π)</code>. Keep the same tracer order across records. The viewer draws
+    the record nearest the field timestamp, so a tracer recording may be thinned.
+    With one record every 0.2 time units from 0 to 10, positions match the stored
+    field times at those 51 timestamps.</p>
+  <p>Write field values and tracer positions to 6 decimals. Drop either file onto
+    this page, or set <code>?src=</code> to the raw URL of a committed
+    <code>fields.jsonl</code>. The viewer looks for <code>tracers.jsonl</code> beside
+    that file. Append <code>&amp;t=10</code> to open the final frame.</p>
+</section>
+
+<div id="drop"><div class="msg">drop fields.jsonl (and tracers.jsonl) to load</div></div>
+<div id="status"></div>
+
+<input id="file" type="file" accept=".jsonl,.json,application/json,text/plain" multiple style="display:none">
+
+<template id="tpl-app">
+  <section class="card">
+    <h2>Vorticity ω — one grid point per cell</h2>
+    <canvas id="omcv" width="640" height="640" role="img"
+      aria-label="Animated vorticity field on a periodic square grid"></canvas>
+    <div class="legend">
+      <span id="lo">–</span>
+      <span class="bar" id="cbar"></span>
+      <span id="hi">+</span>
+      <span style="margin-left:auto" id="gridsize">–</span>
+    </div>
+    <div class="controls">
+      <button id="play" class="primary">▶ play</button>
+      <button id="prev" class="step" title="previous frame (←)">◀</button>
+      <button id="next" class="step" title="next frame (→)">▶</button>
+      <label class="ctl">fps
+        <input id="fps" type="range" min="1" max="60" value="10" style="width:110px">
+        <span id="fpsval" style="min-width:34px;font-variant-numeric:tabular-nums">10</span></label>
+      <label class="ctl"><input id="loop" type="checkbox" checked> loop</label>
+      <label class="ctl"><input id="showtr" type="checkbox" checked> tracers</label>
+      <button id="savepng" title="download this frame with its readouts stamped (s)" disabled>⬇ save PNG</button>
+    </div>
+    <div class="frameline">
+      <input id="scrub" type="range" min="0" max="0" value="0">
+      <span class="fpos" id="fpos">frame 0 / 0</span>
+    </div>
+    <div class="readouts" id="readouts">
+      <div class="ro"><div class="k">time t</div><div class="v" id="ro-t">–</div></div>
+      <div class="ro"><div class="k">frame</div><div class="v" id="ro-frame">–</div></div>
+      <div class="ro"><div class="k">grid N</div><div class="v" id="ro-n">–</div></div>
+      <div class="ro"><div class="k">enstrophy Z</div><div class="v" id="ro-z">–</div></div>
+      <div class="ro" id="ro-e-box"><div class="k">energy E</div><div class="v" id="ro-e">–</div></div>
+    </div>
+    <div class="note">Blue = negative ω (clockwise), white = zero, red = positive
+      (counter-clockwise). The colour scale is fixed at ±max|ω| of the <em>first</em>
+      frame, so the fading of the whole picture is the physical decay, not a rescaling.
+      Watch small blobs of like sign pair up and merge into fewer, bigger ones.</div>
+  </section>
+
+  <section class="card">
+    <h2>History — enstrophy and energy over the whole run</h2>
+    <canvas id="histcv" width="720" height="420" data-h="420" role="img"
+      aria-label="Enstrophy and energy traces over the whole run"></canvas>
+    <div class="reading" id="hist-reading">Z = – · E = –</div>
+    <div class="note">Amber: enstrophy Z = ½⟨ω²⟩ recomputed from each frame's ω
+      (left axis). Green: energy E = ½⟨u² + v²⟩ (right axis) — shown only when the frames
+      carry <code>u</code> and <code>v</code>; an ω-only file cannot give E. Each axis runs
+      from zero to its own maximum, so the two curves start at the same height and the one
+      that falls further has decayed further: in 2D the enstrophy cascades to small scales
+      and dies fast while the energy barely moves.</div>
+  </section>
+</template>
+
+<script>
+"use strict";
+(function () {
+  const TWOPI = 2 * Math.PI;
+
+  // ---------- diverging colormap (ColorBrewer RdBu, reversed) ----------
+  const STOPS = [
+    [-1.0, [ 33, 102, 172]],
+    [-0.5, [103, 169, 207]],
+    [ 0.0, [255, 255, 255]],
+    [ 0.5, [239, 138,  98]],
+    [ 1.0, [178,  24,  43]],
+  ];
+  const LUTN = 512;
+  const LUT = new Uint8Array(LUTN * 3);
+  (function buildLUT() {
+    for (let i = 0; i < LUTN; i++) {
+      const s = -1 + 2 * i / (LUTN - 1);
+      let a = 0;
+      while (a < STOPS.length - 2 && s > STOPS[a + 1][0]) a++;
+      const [s0, c0] = STOPS[a], [s1, c1] = STOPS[a + 1];
+      const f = (s - s0) / (s1 - s0);
+      for (let c = 0; c < 3; c++) LUT[3 * i + c] = Math.round(c0[c] + f * (c1[c] - c0[c]));
+    }
+  })();
+  const lutIndex = s => {                       // s in [-1, 1], clamped
+    const i = Math.round((s + 1) * 0.5 * (LUTN - 1));
+    return i < 0 ? 0 : (i >= LUTN ? LUTN - 1 : i);
+  };
+  function cssGradient() {
+    const parts = [];
+    for (let i = 0; i <= 10; i++) {
+      const j = 3 * lutIndex(-1 + 2 * i / 10);
+      parts.push("rgb(" + LUT[j] + "," + LUT[j + 1] + "," + LUT[j + 2] + ")");
+    }
+    return "linear-gradient(to right," + parts.join(",") + ")";
+  }
+
+  // ---------- one frame from one parsed JSONL object ----------
+  // ω is kept as Float32Array (a 128² × 101 run is 6.6 MB this way, not 50 MB of JSON);
+  // u and v are consumed into E on the spot and dropped.
+  function makeFrame(o) {
+    const raw = o.omega;
+    const n2 = raw.length, N = Math.round(Math.sqrt(n2));
+    if (N * N !== n2) return null;
+    const om = new Float32Array(n2);
+    let z = 0;
+    for (let k = 0; k < n2; k++) { const w = +raw[k]; om[k] = w; z += w * w; }
+    let E = null;
+    if (Array.isArray(o.u) && Array.isArray(o.v) && o.u.length === n2 && o.v.length === n2) {
+      let e = 0;
+      for (let k = 0; k < n2; k++) e += o.u[k] * o.u[k] + o.v[k] * o.v[k];
+      E = 0.5 * e / n2;
+    }
+    return { t: +o.t, step: (o.step != null ? o.step : null), N: N,
+             omega: om, Z: 0.5 * z / n2, E: E };
+  }
+
+  // ---------- streaming JSONL ----------
+  // Read a byte stream line by line so a 50 MB file never becomes one 50 MB JS string
+  // plus a 50 MB parse tree. Routes each line by its keys: `omega` = a field frame,
+  // `x`+`y` = a tracer frame.
+  async function consume(stream, total, label, out) {
+    const reader = stream.getReader(), dec = new TextDecoder();
+    let buf = "", bytes = 0, lines = 0, done = false;
+    const handle = line => {
+      const s = line.trim();
+      if (!s) return;
+      let o; try { o = JSON.parse(s); } catch (e) { return; }   // skip malformed lines
+      if (o && Array.isArray(o.omega)) {
+        const f = makeFrame(o);
+        if (f) out.fields.push(f);
+      } else if (o && Array.isArray(o.x) && Array.isArray(o.y)) {
+        out.tracers.push({ t: +o.t, x: Float32Array.from(o.x), y: Float32Array.from(o.y) });
+      }
+      lines++;
+    };
+    let lastYield = performance.now();
+    while (!done) {
+      const r = await reader.read();
+      done = r.done;
+      if (r.value) {
+        bytes += r.value.byteLength;
+        buf += dec.decode(r.value, { stream: true });
+        let i;
+        while ((i = buf.indexOf("\n")) >= 0) { handle(buf.slice(0, i)); buf = buf.slice(i + 1); }
+        // repaint the status at most ~10×/s: yielding on every 64 KB chunk would add
+        // one animation frame per chunk (~13 s on a 50 MB file) for no benefit
+        const now = performance.now();
+        if (now - lastYield > 100) {
+          lastYield = now;
+          setStatus("reading " + label + " — " + lines + " frames, " + mb(bytes) +
+                    (total ? " / " + mb(total) : "") + "…");
+          await new Promise(res => setTimeout(res, 0));
+        }
+      }
+    }
+    buf += dec.decode();
+    handle(buf);
+    return out;
+  }
+  const mb = b => (b / 1048576).toFixed(1) + " MB";
+
+  // ---------- model state ----------
+  const M = {
+    frames: [], tracers: [],
+    N: 0, wmax: 1,
+    cur: 0, playing: false, fps: 10, lastTick: 0,
+    off: null,
+  };
+  const SRCFILE = { name: "–", size: 0 };   // what was loaded, stamped into the proof PNG
+
+  // ---------- ingest ----------
+  function ingest(out, note) {
+    if (out.fields.length) {
+      M.frames = out.fields;
+      M.N = M.frames[0].N;
+      // vmin/vmax = ±max|ω| of the FIRST frame, held for the whole run, so the decay
+      // shows up as fading colour instead of being normalised away frame by frame.
+      let w = 0;
+      for (const v of M.frames[0].omega) { const a = Math.abs(v); if (a > w) w = a; }
+      M.wmax = w > 0 ? w : 1;
+      M.off = document.createElement("canvas");
+      M.off.width = M.off.height = M.N;
+    }
+    if (out.tracers.length) M.tracers = out.tracers;
+    if (!M.frames.length) { showEmpty(note || "No frames with an <code>omega</code> key."); return; }
+    buildUI();
+    M.cur = startFrame();
+    els.scrub.value = String(M.cur);
+    render(true);
+  }
+
+  // ?frame=N jumps to a frame; ?t=5 jumps to the frame nearest that time.
+  function startFrame() {
+    const q = new URLSearchParams(location.search);
+    if (q.has("frame")) {
+      const n = parseInt(q.get("frame"), 10);
+      if (Number.isFinite(n)) return Math.max(0, Math.min(M.frames.length - 1, n));
+    }
+    if (q.has("t")) {
+      const want = parseFloat(q.get("t"));
+      if (Number.isFinite(want)) {
+        let best = 0, bestDiff = Infinity;
+        for (let i = 0; i < M.frames.length; i++) {
+          const d = Math.abs(M.frames[i].t - want);
+          if (d < bestDiff) { bestDiff = d; best = i; }
+        }
+        return best;
+      }
+    }
+    return 0;
+  }
+
+  // ---------- UI wiring ----------
+  let els = {};
+  function buildUI() {
+    const main = document.getElementById("main");
+    main.innerHTML = "";
+    main.appendChild(document.getElementById("tpl-app").content.cloneNode(true));
+
+    const id = s => document.getElementById(s);
+    els = {
+      omcv: id("omcv"), histcv: id("histcv"), histReading: id("hist-reading"),
+      gridsize: id("gridsize"), cbar: id("cbar"), lo: id("lo"), hi: id("hi"),
+      play: id("play"), prev: id("prev"), next: id("next"),
+      fps: id("fps"), fpsval: id("fpsval"), loop: id("loop"), showtr: id("showtr"),
+      savepng: id("savepng"),
+      scrub: id("scrub"), fpos: id("fpos"), readouts: id("readouts"),
+      roT: id("ro-t"), roFrame: id("ro-frame"), roN: id("ro-n"),
+      roZ: id("ro-z"), roE: id("ro-e"), roEbox: id("ro-e-box"),
+    };
+
+    els.scrub.max = String(M.frames.length - 1);
+    els.play.onclick = () => setPlaying(!M.playing);
+    els.prev.onclick = () => step(-1);
+    els.next.onclick = () => step(+1);
+    els.fps.oninput = () => { M.fps = +els.fps.value; els.fpsval.textContent = els.fps.value; };
+    els.scrub.oninput = () => { M.cur = +els.scrub.value; setPlaying(false); render(); };
+    els.showtr.oninput = () => render();
+    els.savepng.disabled = false;              // a run is loaded, so the proof is composable
+    els.savepng.onclick = savePNG;
+    els.showtr.disabled = !M.tracers.length;
+    if (!M.tracers.length) els.showtr.parentElement.title = "load tracers.jsonl to enable";
+
+    els.gridsize.textContent = M.N + " × " + M.N + " grid";
+    els.cbar.style.background = cssGradient();
+    els.lo.textContent = "ω = −" + M.wmax.toFixed(2);
+    els.hi.textContent = "+" + M.wmax.toFixed(2);
+
+    if (!hasE()) { els.roEbox.remove(); els.readouts.classList.add("no-e"); }
+
+    const ts = M.frames.map(f => f.t);
+    document.getElementById("src").textContent =
+      M.frames.length + " frames · N = " + M.N +
+      " · t " + ts[0].toFixed(2) + "→" + ts[ts.length - 1].toFixed(2) +
+      (M.tracers.length ? " · " + M.tracers[0].x.length + " tracers ✓" : "");
+
+    sizeCanvases();
+  }
+
+  const hasE = () => M.frames.length > 0 && M.frames[0].E !== null;
+
+  function step(d) {
+    setPlaying(false);
+    M.cur = Math.max(0, Math.min(M.frames.length - 1, M.cur + d));
+    els.scrub.value = String(M.cur);
+    render();
+  }
+
+  function setPlaying(on) {
+    M.playing = on;
+    if (els.play) els.play.textContent = on ? "❚❚ pause" : "▶ play";
+    if (on) { M.lastTick = performance.now(); requestAnimationFrame(loop); }
+  }
+
+  function loop(now) {
+    if (!M.playing) return;
+    if (now - M.lastTick >= 1000 / M.fps) {
+      M.lastTick = now;
+      M.cur++;
+      if (M.cur >= M.frames.length) {
+        if (els.loop.checked) M.cur = 0;
+        else { M.cur = M.frames.length - 1; setPlaying(false); render(); return; }
+      }
+      els.scrub.value = String(M.cur);
+      render();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  function sizeCanvases() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = els.omcv.getBoundingClientRect().width;
+    // an integer number of device pixels per grid cell keeps every cell the same size
+    const cell = Math.max(1, Math.floor(w * dpr / M.N));
+    els.omcv.width = els.omcv.height = cell * M.N;
+    const hr = els.histcv.getBoundingClientRect();
+    els.histcv.width = Math.max(1, Math.round(hr.width * dpr));
+    els.histcv.height = Math.max(1, Math.round(+els.histcv.getAttribute("data-h") * dpr));
+  }
+
+  // ---------- rendering ----------
+  function render(forceResize) {
+    if (!M.frames.length) return;
+    if (forceResize) sizeCanvases();
+    drawField();
+    drawHistory();
+    updateReadouts();
+  }
+
+  function updateReadouts() {
+    const fr = M.frames[M.cur];
+    els.roT.textContent = fr.t.toFixed(3);
+    els.roFrame.textContent = M.cur + " / " + (M.frames.length - 1);
+    els.roN.textContent = M.N;
+    els.roZ.textContent = fr.Z.toFixed(5);
+    if (hasE()) els.roE.textContent = fr.E.toFixed(5);
+    els.fpos.textContent = "frame " + M.cur + " / " + (M.frames.length - 1) +
+      "  ·  t = " + fr.t.toFixed(2);
+  }
+
+  // Paint N × N pixels offscreen, then blow them up with smoothing off.
+  // ω is row-major with index iy*N + ix; y points up, so grid row iy = 0 is the
+  // BOTTOM canvas row — hence the (N - 1 - iy) flip.
+  function drawField() {
+    const N = M.N, om = M.frames[M.cur].omega, inv = 1 / M.wmax;
+    const octx = M.off.getContext("2d");
+    const img = octx.createImageData(N, N);
+    const d = img.data;
+    for (let iy = 0; iy < N; iy++) {
+      const row = (N - 1 - iy) * N;
+      for (let ix = 0; ix < N; ix++) {
+        const j = 3 * lutIndex(om[iy * N + ix] * inv);
+        const p = 4 * (row + ix);
+        d[p] = LUT[j]; d[p + 1] = LUT[j + 1]; d[p + 2] = LUT[j + 2]; d[p + 3] = 255;
+      }
+    }
+    octx.putImageData(img, 0, 0);
+
+    const cv = els.omcv, ctx = cv.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(M.off, 0, 0, cv.width, cv.height);
+
+    if (M.tracers.length && els.showtr.checked) drawTracers(ctx, cv);
+  }
+
+  // Tracer positions live in [0, 2π); same orientation as the field (y up).
+  function drawTracers(ctx, cv) {
+    // Match by time, not by index: a thinned tracer file has fewer frames than the run.
+    const t = M.frames[M.cur].t;
+    let best = 0;
+    for (let k = 1; k < M.tracers.length; k++) {
+      if (Math.abs(M.tracers[k].t - t) < Math.abs(M.tracers[best].t - t)) best = k;
+    }
+    const tr = M.tracers[best];
+    const W = cv.width, H = cv.height;
+    // small and translucent: 4000 opaque dots would hide the field they ride on
+    const r = Math.max(0.9, W / M.N * 0.14);
+    ctx.fillStyle = "rgba(11,32,26,.9)";
+    ctx.beginPath();
+    for (let i = 0; i < tr.x.length; i++) {
+      const px = (tr.x[i] / TWOPI) * W, py = H - (tr.y[i] / TWOPI) * H;
+      ctx.moveTo(px + r, py);
+      ctx.arc(px, py, r, 0, 6.2832);
+    }
+    ctx.fill();
+  }
+
+  // Z(t) on the left axis, E(t) on the right axis when the frames carry u and v.
+  // Both axes start at zero so the two decay rates can be compared by eye.
+  function drawHistory() {
+    const cv = els.histcv, ctx = cv.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    const W = cv.width, H = cv.height;
+    const withE = hasE();
+    const padL = 56 * dpr, padR = (withE ? 58 : 26) * dpr, padT = 14 * dpr, padB = 30 * dpr;
+    ctx.clearRect(0, 0, W, H);
+
+    const ts = M.frames.map(f => f.t);
+    const tlo = ts[0], thi = ts[ts.length - 1];
+    const Zs = M.frames.map(f => f.Z);
+    const zhi = Math.max(...Zs) * 1.08 || 1;
+    const Es = withE ? M.frames.map(f => f.E) : [];
+    const ehi = withE ? (Math.max(...Es) * 1.08 || 1) : 1;
+
+    const PX = t => padL + (t - tlo) / Math.max(1e-9, thi - tlo) * (W - padL - padR);
+    const PYz = z => H - padB - z / zhi * (H - padT - padB);
+    const PYe = e => H - padB - e / ehi * (H - padT - padB);
+
+    ctx.strokeStyle = "#3a4660"; ctx.lineWidth = 1;
+    ctx.strokeRect(padL, padT, W - padL - padR, H - padT - padB);
+
+    const trace = (vals, PY, color) => {
+      ctx.strokeStyle = color; ctx.lineWidth = 1.8 * dpr;
+      ctx.beginPath();
+      vals.forEach((v, i) => { const x = PX(ts[i]), y = PY(v); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+      ctx.stroke();
+    };
+    if (withE) trace(Es, PYe, "#56d364");
+    trace(Zs, PYz, "#f0b849");
+
+    // current frame: vertical rule + a dot on each trace
+    const cx = PX(ts[M.cur]);
+    ctx.strokeStyle = "#6ea8ff"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx, padT); ctx.lineTo(cx, H - padB); ctx.stroke();
+    const dot = (y, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(cx, y, 3.5 * dpr, 0, 6.2832); ctx.fill(); };
+    dot(PYz(M.frames[M.cur].Z), "#f0b849");
+    if (withE) dot(PYe(M.frames[M.cur].E), "#56d364");
+
+    // ticks and labels
+    ctx.font = (11 * dpr) + "px system-ui, sans-serif";
+    ctx.fillStyle = "#f0b849"; ctx.textAlign = "right";
+    for (const v of [0, zhi / 2, zhi]) ctx.fillText(v.toFixed(3), padL - 5 * dpr, PYz(v) + 4 * dpr);
+    if (withE) {
+      ctx.fillStyle = "#56d364"; ctx.textAlign = "left";
+      for (const v of [0, ehi / 2, ehi]) ctx.fillText(v.toFixed(3), W - padR + 5 * dpr, PYe(v) + 4 * dpr);
+    }
+    ctx.fillStyle = "#93a1b8"; ctx.textAlign = "center";
+    ctx.fillText("t", (padL + W - padR) / 2, H - 8 * dpr);
+    for (let k = 0; k <= 4; k++) {
+      const t = tlo + k / 4 * (thi - tlo);
+      ctx.fillText(t.toFixed(1), PX(t), H - padB + 15 * dpr);
+    }
+    ctx.textAlign = "left"; ctx.fillStyle = "#f0b849";
+    ctx.fillText("Z = ½⟨ω²⟩", padL + 7 * dpr, padT + 14 * dpr);
+    if (withE) {
+      ctx.textAlign = "right"; ctx.fillStyle = "#56d364";
+      ctx.fillText("E = ½⟨u²+v²⟩", W - padR - 7 * dpr, padT + 14 * dpr);
+    }
+
+    const fr = M.frames[M.cur];
+    els.histReading.textContent =
+      "t = " + fr.t.toFixed(3) + " · Z = " + fr.Z.toFixed(5) +
+      (withE ? " · E = " + fr.E.toFixed(5) : " · E unavailable (ω-only file)") +
+      " · Z/Z(0) = " + (fr.Z / M.frames[0].Z).toFixed(3) +
+      (withE ? " · E/E(0) = " + (fr.E / M.frames[0].E).toFixed(3) : "");
+  }
+
+  // ---------- proof PNG ----------
+  // One image that carries the whole evidence: the field, the history chart, and a
+  // caption stamped with the readouts exactly as the page shows them. Exposed as
+  // window.composeProofPNG() so a headless browser can grab the same image.
+  const fmtSize = b => b ? (b < 1048576 ? Math.round(b / 1024) + " KB" : (b / 1048576).toFixed(1) + " MB")
+                         : "size unknown";
+  const frameKey = () => "t" + M.frames[M.cur].t.toFixed(2);
+
+  function proofLines() {
+    const fr = M.frames[M.cur];
+    return [
+      "t = " + fr.t.toFixed(3) + "   ·   frame " + M.cur + " / " + (M.frames.length - 1) +
+        "   ·   grid N = " + M.N + "   ·   Z = " + fr.Z.toFixed(5) +
+        (hasE() ? "   ·   E = " + fr.E.toFixed(5) : "   ·   E unavailable (ω-only file)"),
+      SRCFILE.name + "   ·   " + fmtSize(SRCFILE.size) + "   ·   " + M.frames.length + " frames" +
+        (M.tracers.length ? "   ·   " + M.tracers[0].x.length + " tracers" : ""),
+      "captured " + new Date().toISOString(),
+    ];
+  }
+
+  function composeProofCanvas() {
+    if (!M.frames.length) return null;
+    const cvs = [els.omcv, els.histcv];
+    const S = window.devicePixelRatio || 1;
+    const P = 20 * S, TITLE = 26 * S, LH = 30 * S, INSET = 18 * S;
+    const FONT = "px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+    const title = "AMAT5315 · Week 4 — Vorticity field viewer";
+    const lines = proofLines();
+
+    const out = document.createElement("canvas");
+    const ctx = out.getContext("2d");
+    ctx.font = "650 " + TITLE + FONT;
+    let textW = ctx.measureText(title).width;
+    ctx.font = (20 * S) + FONT;
+    for (const L of lines) textW = Math.max(textW, ctx.measureText(L).width);
+
+    const capH = 14 * S + TITLE + 10 * S + lines.length * LH + 14 * S;
+    const W = Math.max(Math.max.apply(null, cvs.map(c => c.width)),
+                       Math.ceil(textW) + 2 * INSET) + 2 * P;
+    out.width = W;
+    out.height = P + cvs.reduce((a, c) => a + c.height + P, 0) + capH + P;
+
+    ctx.fillStyle = "#0f1420"; ctx.fillRect(0, 0, W, out.height);
+    let y = P;
+    for (const c of cvs) {
+      const x = Math.round((W - c.width) / 2);
+      ctx.fillStyle = "#1e2637"; ctx.fillRect(x, y, c.width, c.height);   // canvases are transparent
+      ctx.drawImage(c, x, y);
+      y += c.height + P;
+    }
+    ctx.fillStyle = "#171d2b"; ctx.fillRect(P, y, W - 2 * P, capH);
+    ctx.strokeStyle = "#2c3650"; ctx.lineWidth = 1;
+    ctx.strokeRect(P + 0.5, y + 0.5, W - 2 * P - 1, capH - 1);
+    let ty = y + 14 * S + TITLE - 6 * S;
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "#e8edf6"; ctx.font = "650 " + TITLE + FONT;
+    ctx.fillText(title, P + INSET, ty);
+    ctx.font = (20 * S) + FONT; ctx.fillStyle = "#93a1b8";
+    for (const L of lines) { ty += LH; ctx.fillText(L, P + INSET, ty); }
+    return out;
+  }
+
+  window.composeProofPNG = function () {
+    const cv = composeProofCanvas();
+    return cv ? cv.toDataURL("image/png") : null;
+  };
+
+  function savePNG() {
+    const cv = composeProofCanvas();
+    if (!cv) return;
+    cv.toBlob(b => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(b);
+      a.download = "week4-vorticity-" + frameKey() + ".png";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }, "image/png");
+  }
+
+  // ---------- status / empty ----------
+  const statusEl = document.getElementById("status");
+  function setStatus(msg) {
+    if (msg) { statusEl.textContent = msg; statusEl.classList.add("show"); }
+    else statusEl.classList.remove("show");
+  }
+
+  function showEmpty(msg) {
+    const main = document.getElementById("main");
+    main.innerHTML = "";
+    const box = document.createElement("div");
+    box.className = "empty";
+    box.innerHTML =
+      "<h3>Drop your <code>fields.jsonl</code> here</h3>" +
+      "<div>" + (msg || "") + "</div>" +
+      "<div><code>tracers.jsonl</code> may be dropped alongside; it is optional.</div>" +
+      "<div class='picker'><button id='pick' class='primary'>choose file(s)…</button></div>" +
+      "<div class='note'>Or pass <code>?src=</code> with the raw address of a committed " +
+      "<code>fields.jsonl</code>; <code>tracers.jsonl</code> is read from beside it.</div>";
+    main.appendChild(box);
+    document.getElementById("pick").onclick = () => document.getElementById("file").click();
+  }
+
+  // ---------- loading ----------
+  const emptyOut = () => ({ fields: [], tracers: [] });
+
+  async function readFiles(fileList) {
+    const files = Array.from(fileList).filter(f => /\.jsonl?$/i.test(f.name) || !f.name.includes("."));
+    if (!files.length) { alert("Please drop a .jsonl file."); return; }
+    const primary = files.find(f => /field/i.test(f.name)) || files[0];
+    SRCFILE.name = primary.name; SRCFILE.size = primary.size;
+    const out = emptyOut();
+    try {
+      for (const f of files) {
+        // File.stream() keeps a 50 MB file out of one giant string; older browsers fall back.
+        if (typeof f.stream === "function") await consume(f.stream(), f.size, f.name, out);
+        else {
+          const text = await f.text();
+          for (const line of text.split(/\r?\n/)) {
+            let o; try { o = JSON.parse(line); } catch (e) { continue; }
+            if (Array.isArray(o.omega)) { const fr = makeFrame(o); if (fr) out.fields.push(fr); }
+            else if (Array.isArray(o.x) && Array.isArray(o.y))
+              out.tracers.push({ t: +o.t, x: Float32Array.from(o.x), y: Float32Array.from(o.y) });
+          }
+        }
+      }
+    } catch (e) { setStatus(null); alert("Could not read the dropped files: " + e.message); return; }
+    setStatus(null);
+    // tracers dropped on their own: keep the field run already loaded
+    if (!out.fields.length && out.tracers.length && M.frames.length) {
+      M.tracers = out.tracers; buildUI(); render(true); return;
+    }
+    ingest(out, "The dropped file has no <code>omega</code> key on any line.");
+  }
+
+  document.getElementById("file").addEventListener("change", e => {
+    if (e.target.files && e.target.files.length) readFiles(e.target.files);
+  });
+
+  const drop = document.getElementById("drop");
+  let dragDepth = 0;
+  window.addEventListener("dragenter", e => { e.preventDefault(); dragDepth++; drop.classList.add("show"); });
+  window.addEventListener("dragover", e => { e.preventDefault(); });
+  window.addEventListener("dragleave", e => { e.preventDefault(); if (--dragDepth <= 0) drop.classList.remove("show"); });
+  window.addEventListener("drop", e => {
+    e.preventDefault(); dragDepth = 0; drop.classList.remove("show");
+    if (e.dataTransfer && e.dataTransfer.files.length) readFiles(e.dataTransfer.files);
+  });
+
+  window.addEventListener("keydown", e => {
+    if (!M.frames.length) return;
+    if (e.code === "Space") { e.preventDefault(); setPlaying(!M.playing); }
+    else if (e.code === "ArrowRight") step(+1);
+    else if (e.code === "ArrowLeft") step(-1);
+    else if (e.key === "s" || e.key === "S") savePNG();
+  });
+
+  window.addEventListener("resize", () => { if (M.frames.length) render(true); });
+
+  // ---------- auto-fetch of deployed artifacts (GitHub Pages) ----------
+  async function fetchInto(url, out, primary) {
+    let r;
+    try { r = await fetch(url); } catch (e) { return false; }   // file:// or offline
+    if (!r.ok || !r.body) return false;                          // 404s are fine, stay quiet
+    const total = +(r.headers.get("content-length") || 0);
+    if (primary) { SRCFILE.name = url.split("/").pop(); SRCFILE.size = total; }
+    await consume(r.body, total, url.replace("./", ""), out);
+    return true;
+  }
+
+  // `?src=URL` plays a published fields.jsonl from anywhere (the raw address of a file
+  // committed to a student repository); tracers.jsonl is looked for beside it. Without
+  // `src`, the files next to this page.
+  (async function boot() {
+    showEmpty("Loading…");
+    const q = new URLSearchParams(location.search);
+    const src = q.get("src") || "./fields.jsonl";
+    const base = src.slice(0, src.lastIndexOf("/") + 1);
+    setStatus("looking for " + src.split("/").pop() + "…");
+    const out = emptyOut();
+    const gotFields = await fetchInto(src, out, true);
+    if (gotFields) await fetchInto(base + "tracers.jsonl", out);
+    setStatus(null);
+    if (gotFields && out.fields.length) ingest(out);
+    else showEmpty(q.get("src")
+      ? "Could not load <code>" + src + "</code>. Is it committed, and is the address exact?"
+      : "No <code>./fields.jsonl</code> found next to this page. Add <code>?src=</code> with the " +
+        "address of a published <code>fields.jsonl</code>, or drop one here.");
+  })();
+})();
+</script>
+</body>
+</html>

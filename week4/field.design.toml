@@ -1,0 +1,25 @@
+usage       = "field taylor-green --n 64 --nu 0.1 --t 1"
+description = "write a velocity field to stdout; no unstated defaults"
+
+[args]
+n = "grid points per side"
+
+[writes]
+stdout = "one JSON object: case, n, seed, k_band, then u and v as n*n arrays"
+
+[taylor-green]
+usage       = "field taylor-green --n 64 --nu 0.1 --t 1"
+description = "u = cos(x)*sin(y)*exp(-2*nu*t), v = -sin(x)*cos(y)*exp(-2*nu*t)"
+
+[taylor-green.args]
+t  = "time of the exact solution; default 0, the initial field"
+nu = "viscosity of the decay; required if t > 0"
+
+[random]
+usage       = "field random --n 128 --seed 2026 --k-min 2 --k-max 6"
+description = "vorticity modes of equal amplitude, k-min <= |k| <= k-max, E(0) = 0.5"
+
+[random.args]
+seed  = "seed of the phases, uniform in [0, 2*pi), drawn in an order independent of n"
+k-min = "lowest |k| = sqrt(kx^2 + ky^2) kept, inclusive; modes outside are zero"
+k-max = "highest |k| kept, inclusive"

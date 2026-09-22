@@ -1,0 +1,30 @@
+{
+  "reference_dt": 0.0025,
+  "runs": [
+    {
+      "dt": 0.02,
+      "relative_omega_error": 4.738877197730791e-05
+    },
+    {
+      "dt": 0.0125,
+      "relative_omega_error": 7.080082930402344e-06
+    },
+    {
+      "dt": 0.01,
+      "relative_omega_error": 2.8768518909372226e-06
+    }
+  ],
+  "slope": 4.042427172647312,
+  "richardson": {
+    "order": 4,
+    "base_dt": 0.01,
+    "estimated_error_at_base_dt": 2.972541943329758e-06,
+    "predicted_error_at_0.0125": 7.257182478832417e-06
+  },
+  "selection": {
+    "threshold": 5e-06,
+    "dt": 0.01,
+    "predicted_error": 2.972541943329758e-06,
+    "measured_error": 2.8768518909372226e-06
+  }
+}
