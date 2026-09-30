@@ -1,0 +1,94 @@
+{
+  "experiment": {
+    "dt": 0.2,
+    "dx": 1.0,
+    "length_unit_m": 100.0,
+    "name": "reflector",
+    "nx": 41,
+    "nz": 41,
+    "provenance": {
+      "description": "Analytic horizontal thin reflector centered at z=21, x=20. Velocity perturbation, not squared slowness."
+    },
+    "receivers": [
+      [
+        7,
+        8
+      ],
+      [
+        9,
+        8
+      ],
+      [
+        11,
+        8
+      ],
+      [
+        13,
+        8
+      ],
+      [
+        15,
+        8
+      ],
+      [
+        17,
+        8
+      ],
+      [
+        19,
+        8
+      ],
+      [
+        21,
+        8
+      ],
+      [
+        23,
+        8
+      ],
+      [
+        25,
+        8
+      ],
+      [
+        27,
+        8
+      ],
+      [
+        29,
+        8
+      ],
+      [
+        31,
+        8
+      ],
+      [
+        33,
+        8
+      ]
+    ],
+    "schema": "week5-seismic-experiment-v1",
+    "shots": [
+      [
+        10.0,
+        8.0
+      ],
+      [
+        20.0,
+        8.0
+      ],
+      [
+        30.0,
+        8.0
+      ]
+    ],
+    "source_amplitude": 1.0,
+    "source_frequency": 0.08,
+    "source_peak_time": 15.0,
+    "sponge_strength": 0.4,
+    "sponge_width": 6,
+    "steps": 240,
+    "time_unit_s": 0.1
+  },
+  "experiment_file": "inputs/reflector.json"
+}

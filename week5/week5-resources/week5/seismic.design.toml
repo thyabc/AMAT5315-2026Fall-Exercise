@@ -1,0 +1,97 @@
+usage       = "seismic --experiment inputs/reflector.json --mode forward --every 3 --out artifacts/forward"
+description = "simulate acoustic waves and their derivatives; no unstated defaults"
+
+[args]
+experiment = """JSON file with the model and the survey, in reduced units:
+    nx, nz            grid points along x and along depth z
+    dx, dt, steps     grid spacing, timestep, number of time steps
+    source_frequency  peak frequency f0 of the Ricker pulse
+    source_peak_time  time t0 of the pulse's peak
+    source_amplitude  source strength
+    shots             [x, z] grid index of each shot
+    receivers         [x, z] grid index of each receiver
+    sponge_width      sponge width in cells
+    sponge_strength   largest damping, at the edge
+    background        wave speed c, a [z][x] array
+    perturbation      velocity perturbation, a [z][x] array, used by born
+                      and by the forward recording's echo
+    length_unit_m     metres per length unit
+    time_unit_s       seconds per time unit"""
+mode = "forward: pressure traces; born: Born scattered data; adjoint: migrated image"
+out  = "output folder"
+
+[writes]
+stdout = "a header, then one tab-separated line per shot: shot, mode, data L2 norm"
+
+"<out>/run.json"    = """experiment_file: the experiment's path;
+    experiment: its fields except background and perturbation"""
+"<out>/result.json" = "mode, nx, nz, dx, dt, steps, shots, receivers"
+
+"<out>/traces.npy"    = "forward: float64 pressures [shot, step, receiver]"
+"<out>/born_data.npy" = "born: float64 scattered data [shot, step, receiver]"
+"<out>/image.npy"     = "adjoint: float64 velocity sensitivity [z, x]"
+
+[args.recording]
+every = "forward and adjoint only: frame interval in steps from step 0; default off"
+
+[writes.recording]
+"<out>/wavefield.npy" = """float32 frames of the first shot [frame, z, x]:
+    forward: u^n after step n, n increasing;
+    adjoint: the adjoint of u^n after reversing step n, n decreasing"""
+"<out>/echo.npy" = """forward only: float32 frames of the first shot [frame, z, x],
+    u^n in background plus perturbation minus u^n in the background,
+    at the wavefield's frames"""
+"<out>/run.json" = """adds recording: every, and steps and times (step*dt),
+    one entry per frame in frame order"""
+
+[args.reverse]
+data = "born_data.npy of a born run: the receiver weights to back-propagate"
+
+[writes.reverse]
+"<out>/result.json" = """adds a statistics object:
+    storage                  "full": every complete state is kept
+    checkpoints              null
+    reverse_calls            timestep VJPs
+    scheduler_forward_calls  forward steps run to supply saved states,
+                             not the step repeated inside each VJP
+    peak_saved_states        most complete states held at once, N+1 here
+    peak_saved_bytes         their size; one state is 2*nx*nz*8 bytes
+    per_shot                 per shot, in shot order: reverse_calls,
+                             scheduler_forward_calls, peak_saved_states;
+                             the flat counters above aggregate these"""
+
+[args.checkpoint]
+storage     = "how adjoint keeps states: full (default) or treeverse"
+checkpoints = "treeverse only: saved-state slots beyond the initial state"
+
+[writes.checkpoint]
+"<out>/actions-<shot>.json" = """one shot's schedule, one entry per action,
+    each with action, step n, and saved_states (count after it, s_0 included):
+    store    save the working state s_n in a new slot
+    restore  copy the saved s_n into the working state
+    call     advance the working state from s_n to s_(n+1)
+    grad     reverse step n, reading s_n from a saved slot
+    fetch    free the slot holding s_n
+    s_0 is saved from the start and never freed;
+    steps N-1, ..., 0 are each reversed once, in that order;
+    at the end, only s_0 is saved"""
+
+"<out>/result.json" = """statistics object as for full history,
+    with storage "treeverse", checkpoints the budget,
+    and per_shot adding actions_file, a name in <out>"""
+
+[args.reverse]
+data = "born_data.npy of a born run: the receiver weights to back-propagate"
+
+[writes.reverse]
+"<out>/result.json" = """adds a statistics object:
+ storage "full": every complete state is kept
+ checkpoints null
+ reverse_calls timestep VJPs
+ scheduler_forward_calls forward steps run to supply saved states,
+ not the step repeated inside each VJP
+ peak_saved_states most complete states held at once, N+1 here
+ peak_saved_bytes their size; one state is 2*nx*nz*8 bytes
+ per_shot per shot, in shot order: reverse_calls,
+ scheduler_forward_calls, peak_saved_states;
+ the flat counters above aggregate these"""

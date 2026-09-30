@@ -1,0 +1,1 @@
+{"rustc":16556433843423139625,"features":"","declared_features":"","target":0,"profile":0,"path":0,"deps":[[11670467107343860147,"build_script_build",false,17847261915617090612]],"local":[{"RerunIfChanged":{"output":"release/build/seismic/05e8ccae8ad7107b/run/stdout","paths":["src/kernel.rs"]}}],"rustflags":[],"config":0,"compile_kind":0}

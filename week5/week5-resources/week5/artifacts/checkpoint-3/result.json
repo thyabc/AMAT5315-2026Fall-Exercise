@@ -1,0 +1,113 @@
+{
+  "dt": 0.2,
+  "dx": 1.0,
+  "mode": "adjoint",
+  "nx": 41,
+  "nz": 41,
+  "receivers": [
+    [
+      7,
+      8
+    ],
+    [
+      9,
+      8
+    ],
+    [
+      11,
+      8
+    ],
+    [
+      13,
+      8
+    ],
+    [
+      15,
+      8
+    ],
+    [
+      17,
+      8
+    ],
+    [
+      19,
+      8
+    ],
+    [
+      21,
+      8
+    ],
+    [
+      23,
+      8
+    ],
+    [
+      25,
+      8
+    ],
+    [
+      27,
+      8
+    ],
+    [
+      29,
+      8
+    ],
+    [
+      31,
+      8
+    ],
+    [
+      33,
+      8
+    ]
+  ],
+  "shots": [
+    [
+      10.0,
+      8.0
+    ],
+    [
+      20.0,
+      8.0
+    ],
+    [
+      30.0,
+      8.0
+    ]
+  ],
+  "statistics": {
+    "checkpoints": 3,
+    "peak_saved_bytes": 107584,
+    "peak_saved_states": 4,
+    "per_shot": [
+      {
+        "actions_file": "actions-0.json",
+        "peak_saved_states": 4,
+        "reverse_calls": 240,
+        "scheduler_forward_calls": 1695
+      },
+      {
+        "actions_file": "actions-1.json",
+        "peak_saved_states": 4,
+        "reverse_calls": 240,
+        "scheduler_forward_calls": 1695
+      },
+      {
+        "actions_file": "actions-2.json",
+        "peak_saved_states": 4,
+        "reverse_calls": 240,
+        "scheduler_forward_calls": 1695
+      }
+    ],
+    "reverse_calls": 720,
+    "scheduler_forward_calls": 5085,
+    "storage": "treeverse"
+  },
+  "steps": 240,
+  "transpose_identity": {
+    "left": 0.03484789021516358,
+    "relative_difference": 3.185911737468843e-15,
+    "right": 0.03484789021516369
+  }
+}

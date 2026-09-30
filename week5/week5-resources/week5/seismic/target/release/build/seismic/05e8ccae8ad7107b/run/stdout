@@ -1,0 +1,3 @@
+cargo:rerun-if-changed=src/kernel.rs
+cargo:rustc-link-search=native=/mnt/c/Users/紫薯/AMAT5315-2026Fall-EXERCISE/week5/week5-resources/week5/seismic/target/release/build/seismic/05e8ccae8ad7107b/out
+cargo:rustc-link-lib=static=enzyme_kernel
