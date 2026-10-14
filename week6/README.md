@@ -169,3 +169,146 @@ better conditional completion in this experiment.
 Clamping the observed upper half converts unconstrained
 sampling into conditional inference of the missing pixels.
 
+
+<!-- WEEK6_PART3 -->
+## Part 3: Hopfield Network Storage Capacity
+
+### Method
+
+Random spin patterns are stored using the Hebbian rule,
+with J_ii = 0.
+
+Recall uses zero-temperature asynchronous updates
+until a sweep produces no spin flips.
+
+We tested N = 100, 200, 400, 800 and load values
+from 0.05 to 0.25 in steps of 0.01, with 20
+independent pattern sets per point.
+
+### Reproduction
+
+```bash
+.venv/bin/python src/part3_hopfield_check.py
+.venv/bin/python -u src/part3_capacity.py
+```
+
+### Evidence
+
+**Unstable-bit fraction and Gaussian crosstalk prediction**
+
+![Unstable fraction](evidence/part3_unstable_fraction.png)
+
+**Mean final overlap after recall**
+
+![Final overlap](evidence/part3_final_overlap.png)
+
+**Recall success probability, overlap >= 0.9**
+
+![Recall success](evidence/part3_recall_success.png)
+
+### Capacity results
+
+| Number of spins N | Estimated overlap=0.9 crossing |
+|---|---|
+| 100 | 0.1880 |
+| 200 | 0.1644 |
+| 400 | 0.1563 |
+| 800 | 0.1479 |
+
+The theoretical critical load is alpha_c approximately 0.138.
+The crossing estimates use linear interpolation between
+neighboring experimental load points.
+
+### Conclusion
+
+The measured unstable-bit fraction approximately follows
+the Gaussian crosstalk prediction, with finite-size effects
+more visible for small N.
+
+Recall is reliable at low load, but deteriorates as
+more patterns are stored. The transition becomes sharper
+and approaches the theoretical critical load as N grows.
+
+
+<!-- WEEK6_PART4 -->
+## Part 4: Modern Hopfield Networks and Attention
+
+### Method
+
+Binarized MNIST images are stored as spin patterns.
+Each query retains the original upper half and replaces
+its lower half with random spins.
+
+Modern Hopfield retrieval uses:
+
+    x_new = X softmax(beta X^T x)
+
+This update is equivalent to softmax attention when
+the stored patterns are both keys and values,
+with attention scale beta.
+
+The classical Hopfield network is evaluated on
+the same stored patterns and corrupted queries.
+
+### Reproduction
+
+Run these commands from week6/:
+
+```bash
+.venv/bin/python src/part4_attention_check.py
+.venv/bin/python src/part4_retrieval.py
+```
+
+### Evidence
+
+**Softmax weights across inverse temperatures**
+
+![Attention weights](evidence/part4_attention_weights.png)
+
+With increasing beta, attention weights concentrate
+on the most similar stored pattern.
+
+**Digit retrieval comparison**
+
+![Retrieval gallery](evidence/part4_retrieval_gallery_p100.png)
+
+Small beta produces an average of stored images.
+Larger beta retrieves individual stored digits.
+Classical Hopfield recall fails for these highly
+correlated digit patterns.
+
+**Retrieval success**
+
+![Retrieval success](evidence/part4_retrieval_success.png)
+
+### Attention numerical equivalence
+
+| Beta | Maximum absolute difference |
+|---|---|
+| 0.003 | 5.9604645e-07 |
+| 0.03 | 5.364418e-07 |
+| 0.3 | 1.7881393e-07 |
+
+### Retrieval success
+
+| Stored patterns P | Modern beta=0.3 | Classical |
+|---|---:|---:|
+| 3 | 100.00% | 0.00% |
+| 10 | 100.00% | 0.00% |
+| 30 | 100.00% | 0.00% |
+| 100 | 99.00% | 0.00% |
+| 300 | 98.00% | 0.00% |
+| 1000 | 96.00% | 0.00% |
+
+### Conclusion
+
+Modern Hopfield retrieval is equivalent to a
+softmax-attention operation with the appropriate scale.
+
+Increasing inverse temperature changes retrieval
+from averaging stored patterns to selecting the
+most similar pattern.
+
+Modern retrieval is effective for correlated MNIST
+digits even when classical Hopfield recall fails.
+
