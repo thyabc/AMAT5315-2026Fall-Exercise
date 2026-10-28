@@ -80,3 +80,27 @@ Evidence: `evidence/part3_mlp_training_curve.png`.
 
 Raw metrics are in `artifacts/part3_*.json` (not for Git).
 <!-- END WEEK8 PART3 -->
+
+## Part 4: Attention — recall from context-built memory
+
+Reproduce from `week8_1/`:
+
+```bash
+uv run --no-project --with numpy --with matplotlib python part4_attention.py
+```
+
+In d=64 with β=8 and seed=1730, store a 32×32 binary character
+(+1 ink, -1 background) among M=64/256/1024/4096 memories.
+Compare outer-product, ReLU, ReLU² and softmax stores.
+Normalize each recalled image by the target memory's own weight;
+R is the L2 norm of interference divided by L2 norm of target.
+
+- Main evidence: `evidence/part4_attention_recall.png` (4×4 dot panels)
+- Original picture: `evidence/part4_original_picture.png`
+- Raw results: `artifacts/part4_recall_ratios.csv` and `artifacts/part4_summary.json`
+- Implementation: `part4_attention.py`
+
+The character in the supplied PDF is not machine-readable (missing glyph);
+this experiment uses a reproducible, manually drawn 32×32 亮-like glyph.
+The image's shape does not affect the theoretical R comparisons.
+The color of each panel is red when R < 1, gray otherwise.
