@@ -104,3 +104,65 @@ The character in the supplied PDF is not machine-readable (missing glyph);
 this experiment uses a reproducible, manually drawn 32×32 亮-like glyph.
 The image's shape does not affect the theoretical R comparisons.
 The color of each panel is red when R < 1, gray otherwise.
+
+<!-- BEGIN WEEK8 PART5 -->
+## Part 5 — Transformer: training and generating
+
+See `part5_transformer.py` for exact model and tests.
+
+```bash
+uv run --no-project --with numpy --with matplotlib --with "jax[cpu]" --with sentencepiece --with scipy python -u part5_transformer.py --stage train
+uv run --no-project --with numpy --with matplotlib --with "jax[cpu]" --with sentencepiece --with scipy python -u part5_transformer.py --stage verify
+```
+
+Validation: **1.20632 bits/character** vs 4-gram **1.30975**. Last 8 context positions: 1.64998 nats/token; trigram 2.09434.
+
+Evidence:
+- `evidence/part5_transformer_training.png`
+- `evidence/part5_context_loss.png`
+- `evidence/part5_transformer_vs_counts.png`
+- `evidence/part5_samples_and_tests.txt`
+
+Raw checkpoint and full metrics: `artifacts/part5_*`. Sampling: 100,000 draws per distribution; surprise/entropy: 128 independent sequences of 128 tokens per temperature.
+
+Acceptance checks:
+- beats_best_count_model: PASS
+- context_last_8_beats_trigram: PASS
+- sampler_chi_square: PASS
+- greedy_0.0001: PASS
+- entropy_temperature_1: PASS
+- surprise_temperature_0.7: PASS
+<!-- END WEEK8 PART5 -->
+
+<!-- BEGIN WEEK8 PART6 -->
+## Part 6 — Scaling laws: how to spend a compute budget
+
+Dataset: Epoch AI's Chinchilla Figure 4 reconstruction, fixed revision `92258837425e1b5f2851d624287f0120583a3d0e`:
+`https://raw.githubusercontent.com/epoch-research/analyzing-chinchilla/92258837425e1b5f2851d624287f0120583a3d0e/data/svg_extracted_data.csv`. Data file `data/chinchilla-runs.csv` has 245 rows, and the 5 highest-loss
+runs are excluded (240 fitted runs). Keep `data/` and `artifacts/` out of Git.
+
+Reproduce inside the `week8_1/` folder:
+
+```bash
+uv run --no-project --with numpy --with scipy --with matplotlib python -u part6_scaling.py --bootstrap 400
+```
+
+Fit `L(N,D)=E+A/N^alpha+B/D^beta`, with `D=C/(6N)`, via Huber loss
+(`delta=0.001`) applied to log-loss residuals; fit L-BFGS-B from a grid,
+then bootstrap 400 times (seed 1730) for standard errors and a 95% interval.
+
+| Parameter | Refit | Bootstrap standard error |
+|---|---:|---:|
+| E | 1.8172 | 0.02536 |
+| A | 477.83 | 118.8 |
+| B | 2143.4 | 1129 |
+| alpha | 0.34731 | 0.01501 |
+| beta | 0.36717 | 0.0197 |
+
+- Figure 19, fit and measured-vs-predicted: `evidence/part6_chinchilla_fit.png`.
+- Figure 20, residual comparison: `evidence/part6_chinchilla_residuals.png`.
+- Figure 21, optimal allocation: `evidence/part6_chinchilla_allocation.png`.
+- The mean log-loss residual for our refit is -0.00066; for printed parameters +0.01674.
+- At 5.76e23 FLOP, our `D*/N*` is 17.921 with 95% bootstrap interval [7.51, 37.13].
+- Raw numeric results are `artifacts/part6_summary.json` and `artifacts/part6_optimal_allocation.csv`.
+<!-- END WEEK8 PART6 -->
