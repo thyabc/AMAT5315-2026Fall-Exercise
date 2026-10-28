@@ -1,3 +1,9 @@
 __pycache__/
 .pytest_cache/
-*.pyc
+*.pyc/week7/.venv/
+/week7/artifacts/
+/week7/inputs/
+/week7/src/__pycache__/
+
+/week8_1/data/
+/week8_1/artifacts/
