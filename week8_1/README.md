@@ -52,3 +52,31 @@ Bigram exact normalization (lengths 1–3) maximum absolute error: 3.66e-15. 250
 
 Evidence: `evidence/part2_ngram_loss_unseen.png`. Raw runs: `artifacts/part2_summary.json`, `artifacts/part2_ngram_metrics.csv` and the cached token arrays.
 <!-- END WEEK8 PART2 -->
+
+<!-- BEGIN WEEK8 PART3 -->
+## Part 3 — The MLP: a memory in the weights
+
+Re-run inside `week8_1/` using Python/uv and CPU JAX:
+```bash
+uv run --no-project --with numpy --with matplotlib --with 'jax[cpu]' --with sentencepiece --with sentencepiece python -u part3_mlp.py --only memory
+uv run --no-project --with numpy --with matplotlib --with 'jax[cpu]' --with sentencepiece --with sentencepiece python -u part3_mlp.py --only mlp
+```
+
+**Memory stores:** Three random draws for each d=16,32,64 and M=8,...,65536 (powers of two). For M>1024 only a random subset of stored query keys is evaluated against all stored memories, an explicit CPU-saving approximation to the sheet's exhaustive query requirement. Results at smaller M query all keys. Interference R is the norm of the leakage from other memories divided by signal.
+
+| Store | d=64 capacity | Scaling exponent |
+|---|---:|---:|
+| Outer product | 68.3 | 1.071 |
+| Least squares | 128.9 | 1.005 |
+| ReLU | 141.0 | 0.907 |
+| ReLU^2 | 2814.3 | 1.868 |
+| ReLU^3 | 38945.3 | 2.808 |
+
+Evidence: `evidence/part3_memory_interference.png`, `evidence/part3_capacity_scaling.png`.
+
+**One-token MLP:** 512-token vocabulary, embedding 64, tanh hidden layer 512; 4000 AdamW steps, batch size 16384, learning rate peak 0.006, cosine decay and warmup.
+Held-out loss: **3.04098** nats/token, Bigram baseline: **3.03819**, difference: +0.00279. Threshold ±0.01: PASS.
+Evidence: `evidence/part3_mlp_training_curve.png`.
+
+Raw metrics are in `artifacts/part3_*.json` (not for Git).
+<!-- END WEEK8 PART3 -->
