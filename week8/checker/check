@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+"""W8 gate: independent NPZ forward, held-out CE/PPL, causal and resume evidence.
+
+See README.md for numeric artifacts and tolerances. Exit 0 PASS, 1 failed
+scientific evidence, 2 invalid/missing schema. No student code is imported.
+"""
+import os
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['OMP_NUM_THREADS'] = '1'
+import csv
+import json
+import sys
+import zipfile
+from pathlib import Path
+
+import numpy as np
+from evaluator import corpus, evaluate, forward, load_model, numeric_npz
+
+# Two seeded reference runs scored 1.56165 and 1.56045; this is an empirical cutoff.
+TARGET_VAL_LOSS = 1.65
+SCORE_TOL = 1e-4
+PROBE_TOL = 2e-4
+RESUME_TOL = 1e-6
+
+
+class EvidenceFailure(Exception):
+    pass
+
+
+def require(name, error, tolerance):
+    print(f'  {name}: measured {error:.9g} (required <= {tolerance:.9g})', flush=True)
+    if not np.isfinite(error) or error > tolerance:
+        raise EvidenceFailure(f'{name}: {error:.9g} > {tolerance:.9g}')
+
+
+def json_file(path):
+    result = json.loads(path.read_text())
+    # Reject NaN/Infinity even in metadata and claims that are not used as evidence.
+    def finite(value):
+        if isinstance(value, float) and not np.isfinite(value):
+            raise ValueError(f'{path}: nonfinite JSON number')
+        if isinstance(value, dict):
+            for item in value.values(): finite(item)
+        if isinstance(value, list):
+            for item in value: finite(item)
+    finite(result)
+    return result
+
+
+def check_resume(art):
+    meta = json_file(art / 'resume.json')
+    full = numeric_npz(art / 'resume' / 'uninterrupted.npz')
+    resumed = numeric_npz(art / 'resume' / 'resumed.npz')
+    if full.keys() != resumed.keys():
+        raise ValueError('resume final state fields differ')
+    required = {'step', 'key', 'elapsed_seconds'}
+    if not required <= full.keys():
+        raise ValueError('resume state missing step, key, or elapsed_seconds')
+    parameters = [k for k in full if k.startswith('p::')]
+    if not parameters or any('mu::'+k[3:] not in full or 'nu::'+k[3:] not in full
+                             for k in parameters):
+        raise ValueError('resume state missing parameters or Adam moments')
+    for state in (full, resumed):
+        if (state['step'].shape != () or state['step'].dtype.kind not in 'iu'
+                or state['key'].shape != (2,) or state['key'].dtype != np.uint32
+                or state['elapsed_seconds'].shape != () or state['elapsed_seconds'] < 0):
+            raise ValueError('resume needs scalar integer step, uint32[2] key, nonnegative elapsed time')
+    for key in full:
+        if full[key].shape != resumed[key].shape:
+            raise ValueError(f'resume array shape mismatch: {key}')
+    for key in full:
+        if key not in ('elapsed_seconds', 'step', 'key') and not key.startswith(('p::', 'mu::', 'nu::')):
+            require('resume-state-'+key, float(np.max(np.abs(full[key].astype(float)-resumed[key].astype(float)))), 0)
+    require('resume-step', abs(float(full['step']) - float(resumed['step'])), 0)
+    if int(full['step']) <= int(meta['split_step']) or meta['split_step'] <= 0:
+        raise ValueError('resume must continue past a positive saved step')
+    require('resume-key', float(np.max(np.abs(full['key'].astype(float)
+                                             - resumed['key'].astype(float)))), 0)
+    for prefix, name in [('p::', 'resume-weights'), ('mu::', 'resume-adam-mu'),
+                         ('nu::', 'resume-adam-nu')]:
+        error = max(float(np.max(np.abs(full[k].astype(float) - resumed[k].astype(float))))
+                    for k in full if k.startswith(prefix))
+        require(name, error, RESUME_TOL)
+    traces = numeric_npz(art / 'resume' / 'losses.npz')
+    a, b = traces['uninterrupted'], traces['resumed']
+    if (a.ndim != 1 or a.shape != b.shape or len(a) < 2
+            or len(a) != int(full['step']) - meta['split_step']):
+        raise ValueError('resume needs one loss per continued step and >= 2 losses')
+    require('resume-losses', float(np.max(np.abs(a-b))), RESUME_TOL)
+
+
+def check_report(art, score, model, train, val, vocabulary):
+    reported = json_file(art / 'eval.json')
+    if (reported['corpus_sha256'] != model['corpus_sha256']
+            or reported['checkpoint_sha256'] != model['checkpoint_sha256']
+            or reported['vocabulary'] != vocabulary
+            or reported['evaluation_policy'] != 'contiguous-128-reset-context-final-short-block'
+            or reported['train_tokens'] != len(train) or reported['val_tokens'] != len(val)):
+        raise ValueError('eval metadata must identify the pinned split, checkpoint, and context policy')
+    if reported['token_count'] != len(val)-1 or reported['block_tokens'] != score['block_tokens']:
+        raise EvidenceFailure('token-count: score every validation target once, including final partial block')
+    nll = np.asarray(reported['block_nll'], dtype=float)
+    if nll.shape != (len(score['block_nll']),):
+        raise ValueError('eval block_nll length mismatch')
+    require('target-alignment', float(np.max(np.abs(nll-np.array(score['block_nll']))
+                                                   / np.array(score['block_tokens']))), SCORE_TOL)
+    require('token-weighting', abs(reported['loss']-sum(nll)/sum(reported['block_tokens'])), SCORE_TOL)
+    require('sum-nll', abs(reported['sum_nll']-score['sum_nll'])/score['token_count'], SCORE_TOL)
+    require('reported-loss', abs(reported['loss']-score['loss']), SCORE_TOL)
+    require('ppl-identity', abs(reported['ppl']-np.exp(reported['loss']))/score['ppl'], SCORE_TOL)
+
+
+def check_baselines(art, train, val, vocabulary):
+    baseline = json_file(art / 'baselines.json')
+    if baseline['vocabulary'] != vocabulary:
+        raise ValueError('baseline vocabulary mismatch')
+    expected_counts = np.bincount(val[1:], minlength=65)
+    expected_probs = (np.bincount(train, minlength=65)+1)/(len(train)+65)
+    counts = np.asarray(baseline['validation_counts'])
+    probs = np.asarray(baseline['train_probabilities'])
+    if counts.shape != (65,) or probs.shape != (65,):
+        raise ValueError('baseline needs 65 counts and probabilities')
+    require('baseline-target-counts', float(np.max(np.abs(counts-expected_counts))), 0)
+    require('training-frequencies', float(np.max(np.abs(probs-expected_probs))), 1e-8)
+    frequency_loss = float(-np.dot(expected_counts, np.log(expected_probs))/len(val[1:]))
+    for name, loss in [('uniform', np.log(65)), ('frequency', frequency_loss),
+                       ('two_target_example', np.log(8)/2)]:
+        report = baseline[name]
+        require(name+'-loss', abs(report['loss']-loss), SCORE_TOL)
+        require(name+'-ppl', abs(report['ppl']-np.exp(loss))/np.exp(loss), SCORE_TOL)
+    print(f'  frequency baseline: loss={frequency_loss:.9f}, PPL={np.exp(frequency_loss):.9f}')
+
+
+def read_log(directory):
+    with (directory / 'train_log.csv').open() as f:
+        rows = list(csv.DictReader(f))
+    if len(rows) < 2:
+        raise ValueError('training log needs initial and final rows')
+    values = np.asarray([[float(row[k]) for k in ('step', 'tokens', 'lr', 'train_loss', 'val_loss', 'wall_seconds')]
+                         for row in rows])
+    if not np.all(np.isfinite(values)) or np.any(np.diff(values[:, 0]) <= 0):
+        raise ValueError('training log must be finite with increasing steps')
+    return values
+
+def check_comparison(art, score, model, train, val, vocabulary):
+    directories = [art/'comparison'/'baseline', art/'comparison'/'narrow']
+    configs = [json_file(directory/'config.json') for directory in directories]
+    controlled = ('n_layer', 'n_head', 'block_size', 'vocab_size', 'dropout',
+                  'batch_size', 'learning_rate', 'min_lr', 'weight_decay', 'max_steps',
+                  'warmup_steps', 'eval_interval', 'seed', 'device', 'device_kind', 'precision', 'matmul_precision')
+    if any(configs[0][key] != configs[1][key] for key in controlled):
+        raise EvidenceFailure('comparison-controls: width comparison must keep data, optimization, budget and device fixed')
+    if configs[0]['n_embd'] <= configs[1]['n_embd']:
+        raise EvidenceFailure('comparison-width: narrow must have fewer channels than baseline')
+    for directory, run_config in zip(directories, configs):
+        params, architecture, metadata = load_model(directory, vocabulary)
+        if any(architecture[k] != run_config[k] for k in ('n_layer', 'n_head', 'n_embd', 'block_size')):
+            raise ValueError('comparison config does not describe exported weights')
+        result = score if metadata['checkpoint_sha256'] == model['checkpoint_sha256'] else evaluate(params, architecture, val)
+        check_report(directory, result, metadata, train, val, vocabulary)
+        final = read_log(directory)[-1]
+        expected_tokens = run_config['max_steps']*run_config['batch_size']*128
+        require(directory.name+'-training-tokens', abs(final[1]-expected_tokens), 0)
+        require(directory.name+'-saved-step', abs(metadata['step']-run_config['max_steps']), 0)
+        require(directory.name+'-log-loss', abs(final[4]-result['loss']), SCORE_TOL)
+        elapsed = float(run_config['elapsed_seconds'])
+        if not np.isfinite(elapsed) or elapsed <= 0 or final[5] <= 0:
+            raise ValueError('comparison must record positive synchronized elapsed time')
+        print(f"  comparison {directory.name}: loss={result['loss']:.9f}, PPL={result['ppl']:.9f}, recorded seconds={elapsed:.3f}")
+
+
+def main(repo):
+    art = Path(repo) / 'artifacts'
+    print(f'week8 checker: independent character LM evaluation: {repo}', flush=True)
+    train, val, vocabulary = corpus()
+    check_baselines(art, train, val, vocabulary)
+    params, config, model = load_model(art, vocabulary)
+    # Probe arrays demonstrate the student's own forward, not just the evaluator's mask.
+    probe = numeric_npz(art / 'causality.npz')
+    probe_meta = json_file(art / 'causality.json')
+    a, b = probe['inputs_a'], probe['inputs_b']
+    prefix = probe_meta['prefix_length']
+    if (a.ndim != 2 or a.shape != b.shape or a.shape[0] != 1
+            or not 1 <= prefix < a.shape[1] or a.dtype.kind not in 'iu'
+            or b.dtype.kind not in 'iu' or np.any(a < 0) or np.any(a >= 65)
+            or np.any(b < 0) or np.any(b >= 65)
+            or not np.array_equal(a[:, :prefix], b[:, :prefix])
+            or np.array_equal(a[:, prefix:], b[:, prefix:])):
+        raise ValueError('causality inputs need an equal prefix and a changed suffix')
+    la, lb = probe['logits_a'], probe['logits_b']
+    if la.shape != (*a.shape, 65) or lb.shape != la.shape:
+        raise ValueError('causality logits shape mismatch')
+    require('causal-prefix', float(np.max(np.abs(la[:, :prefix]-lb[:, :prefix]))), PROBE_TOL)
+    for ids, logits in [(a, la), (b, lb)]:
+        expected, attention = forward(params, config, ids)
+        require('forward-probe', float(np.max(np.abs(logits-expected))), PROBE_TOL)
+        require('causal-mask', float(np.max(np.abs(np.triu(attention, k=1)))), 0)
+    check_resume(art)
+    score = evaluate(params, config, val)
+    print(f"  independent loss={score['loss']:.9f}, PPL={score['ppl']:.9f}, tokens={score['token_count']}", flush=True)
+    check_report(art, score, model, train, val, vocabulary)
+    values = read_log(art)
+    run_config = json_file(art / 'config.json')
+    if any(run_config[k] != config[k] for k in ('n_layer', 'n_head', 'n_embd', 'block_size')):
+        raise ValueError('main config does not describe exported weights')
+    require('main-training-tokens', abs(values[-1, 1]-model['step']*run_config['batch_size']*128), 0)
+    require('checkpoint-step', abs(values[-1, 0]-model['step']), 0)
+    require('log-consistency', abs(values[-1, 4]-score['loss']), SCORE_TOL)
+    require('target-met', score['loss'], TARGET_VAL_LOSS)
+    if values[-1, 4] >= values[0, 4]:
+        raise EvidenceFailure('training: final validation loss must improve on initialization')
+    check_comparison(art, score, model, train, val, vocabulary)
+    for name in ('baselines.html', 'attention.html', 'loss.html', 'comparison.html', 'resume.html'):
+        if not (art / name).read_text().strip():
+            raise ValueError(f'{name} is empty')
+    if not (Path(repo) / 'README.md').read_text().strip():
+        raise ValueError('README.md is empty')
+    if not (art / 'sample.txt').read_text().strip():
+        raise ValueError('sample.txt is empty')
+    print(f"PASS: independent loss {score['loss']:.6f}, PPL {score['ppl']:.6f}; causal and resumed evidence agree")
+
+
+if __name__ == '__main__':
+    try:
+        if len(sys.argv) != 2:
+            raise ValueError('usage: check STUDENT_REPO')
+        main(sys.argv[1])
+    except EvidenceFailure as exc:
+        print(f'FAIL: {exc}')
+        sys.exit(1)
+    except (ValueError, KeyError, TypeError, OSError, RuntimeError, IndexError, OverflowError, EOFError, zipfile.BadZipFile) as exc:
+        print(f'FAIL: schema: {exc}')
+        sys.exit(2)

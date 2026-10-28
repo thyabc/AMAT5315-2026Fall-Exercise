@@ -1,0 +1,14 @@
+{
+  "section": "part3b",
+  "primary": "pure",
+  "protocol_note": "Protocol B, registered 2026-10-07 after protocol A's two blind tests (widths 128 and 96) both came out below their 95% intervals. Over 1.5-2 decades of N on CPU, L_inf is not identifiable (refits pin it at 0), so the pre-registered predictor is the pure power law L = a N^-alpha with a Birge-inflated parametric bootstrap. Fit set = every trained width except the bigram-plateau width 8. Held-out width 192 has not been trained when this prediction is written.",
+  "n_layer": 2,
+  "n_head": 2,
+  "fit_widths": [12, 16, 24, 32, 48, 64, 96, 128],
+  "excluded_widths": [8],
+  "heldout_width": 192,
+  "seeds": [1, 2],
+  "log_every": 300,
+  "training": {"batch_size": 16, "learning_rate": 0.003, "min_lr": 0.0003,
+               "warmup_steps": 100, "max_steps": 1500, "weight_decay": 0.1}
+}

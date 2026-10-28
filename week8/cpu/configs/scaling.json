@@ -1,0 +1,12 @@
+{
+  "n_layer": 2,
+  "n_head": 2,
+  "fit_widths": [12, 16, 24, 32, 48, 64],
+  "excluded_widths": [8],
+  "excluded_reason": "width 8 (N=1744) ends at 2.487, on the bigram plateau (2.482): it has not left the regime where the law applies. Decided before any held-out run.",
+  "heldout_width": 128,
+  "seeds": [1, 2],
+  "log_every": 300,
+  "training": {"batch_size": 16, "learning_rate": 0.003, "min_lr": 0.0003,
+               "warmup_steps": 100, "max_steps": 1500, "weight_decay": 0.1}
+}

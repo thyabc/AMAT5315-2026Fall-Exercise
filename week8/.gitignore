@@ -1,0 +1,18 @@
+# Raw experimental results
+/artifacts/
+/results/
+/cpu/work/
+/data/input.txt
+/data/*-measurements.json
+/data/*-evidence.npz
+
+# Downloaded resources
+/speedrun/input.txt
+/week8-resources/
+/week8-resources.zip
+/week8-learning-sheet.pdf
+
+# Python environments and caches
+.venv/
+__pycache__/
+*.pyc

@@ -1,0 +1,833 @@
+{
+  "date": "2026-09-07",
+  "evaluator": "NumPy float64, CPU, one BLAS thread",
+  "training_matmul_precision": "jax.lax.Precision.HIGHEST",
+  "source_command": "make week8-gates VENV=week8/speedrun/.venv",
+  "exit_validation": "make week8-gates succeeded after enforcing reference exit 0 and all six negative exits 1",
+  "timings": "Not recorded per fixture in the shared gate run",
+  "quality_target": 1.65,
+  "checkpoint_sha256": "f85836fd1941774d8d409f88eba6ae8d412acd9afba4a9f8fb0b77b3505e2f38",
+  "minimum_positive_residual_margin": 31.033070208172227,
+  "limiting_positive_check": {
+    "name": "forward-probe",
+    "measured": 6.44473778e-06,
+    "tolerance": 0.0002
+  },
+  "negative_residual_margins": {
+    "fixtures/week8-broken": 30138.643699999997,
+    "fixtures/week8-noncausal": 28962.639049999998,
+    "fixtures/week8-wrong-targets": 81176.6498,
+    "fixtures/week8-wrong-weighting": 2296.81787,
+    "fixtures/week8-missing-optimizer": 3896.58811
+  },
+  "fixtures": [
+    {
+      "fixture": "fixtures/week8-reference",
+      "exit": 0,
+      "verdict": "PASS: independent loss 1.561646, PPL 4.766661; causal and resumed evidence agree",
+      "checks": [
+        {
+          "name": "baseline-target-counts",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "training-frequencies",
+          "measured": 0.0,
+          "tolerance": 1e-08
+        },
+        {
+          "name": "uniform-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "uniform-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "frequency-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "frequency-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "two_target_example-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "two_target_example-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "causal-prefix",
+          "measured": 0.0,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "forward-probe",
+          "measured": 6.44473778e-06,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "causal-mask",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "forward-probe",
+          "measured": 6.2967022e-06,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "causal-mask",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-state-config_json",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-step",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-key",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-weights",
+          "measured": 0.0,
+          "tolerance": 1e-06
+        },
+        {
+          "name": "resume-adam-mu",
+          "measured": 0.0,
+          "tolerance": 1e-06
+        },
+        {
+          "name": "resume-adam-nu",
+          "measured": 0.0,
+          "tolerance": 1e-06
+        },
+        {
+          "name": "resume-losses",
+          "measured": 0.0,
+          "tolerance": 1e-06
+        },
+        {
+          "name": "target-alignment",
+          "measured": 6.55759779e-07,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "token-weighting",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "sum-nll",
+          "measured": 3.26088878e-09,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "reported-loss",
+          "measured": 3.26088867e-09,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "ppl-identity",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "main-training-tokens",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "checkpoint-step",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "log-consistency",
+          "measured": 3.26088867e-09,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "target-met",
+          "measured": 1.56164597,
+          "tolerance": 1.65
+        },
+        {
+          "name": "target-alignment",
+          "measured": 6.55759779e-07,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "token-weighting",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "sum-nll",
+          "measured": 3.26088878e-09,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "reported-loss",
+          "measured": 3.26088867e-09,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "ppl-identity",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "baseline-training-tokens",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "baseline-saved-step",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "baseline-log-loss",
+          "measured": 3.26088867e-09,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "target-alignment",
+          "measured": 5.25031437e-07,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "token-weighting",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "sum-nll",
+          "measured": 1.1341455e-08,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "reported-loss",
+          "measured": 1.13414549e-08,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "ppl-identity",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "narrow-training-tokens",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "narrow-saved-step",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "narrow-log-loss",
+          "measured": 1.13414549e-08,
+          "tolerance": 0.0001
+        }
+      ]
+    },
+    {
+      "fixture": "fixtures/week8-broken",
+      "exit": 1,
+      "verdict": "FAIL: target-alignment: 3.01386437 > 0.0001",
+      "checks": [
+        {
+          "name": "baseline-target-counts",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "training-frequencies",
+          "measured": 0.0,
+          "tolerance": 1e-08
+        },
+        {
+          "name": "uniform-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "uniform-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "frequency-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "frequency-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "two_target_example-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "two_target_example-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "causal-prefix",
+          "measured": 0.0,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "forward-probe",
+          "measured": 0.0,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "causal-mask",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "forward-probe",
+          "measured": 0.0,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "causal-mask",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-state-config_json",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-step",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-key",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-weights",
+          "measured": 0.0,
+          "tolerance": 1e-06
+        },
+        {
+          "name": "resume-adam-mu",
+          "measured": 0.0,
+          "tolerance": 1e-06
+        },
+        {
+          "name": "resume-adam-nu",
+          "measured": 0.0,
+          "tolerance": 1e-06
+        },
+        {
+          "name": "resume-losses",
+          "measured": 0.0,
+          "tolerance": 1e-06
+        },
+        {
+          "name": "target-alignment",
+          "measured": 3.01386437,
+          "tolerance": 0.0001
+        }
+      ]
+    },
+    {
+      "fixture": "fixtures/week8-noncausal",
+      "exit": 1,
+      "verdict": "FAIL: causal-prefix: 5.79252781 > 0.0002",
+      "checks": [
+        {
+          "name": "baseline-target-counts",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "training-frequencies",
+          "measured": 0.0,
+          "tolerance": 1e-08
+        },
+        {
+          "name": "uniform-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "uniform-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "frequency-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "frequency-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "two_target_example-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "two_target_example-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "causal-prefix",
+          "measured": 5.79252781,
+          "tolerance": 0.0002
+        }
+      ]
+    },
+    {
+      "fixture": "fixtures/week8-wrong-targets",
+      "exit": 1,
+      "verdict": "FAIL: target-alignment: 8.11766498 > 0.0001",
+      "checks": [
+        {
+          "name": "baseline-target-counts",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "training-frequencies",
+          "measured": 0.0,
+          "tolerance": 1e-08
+        },
+        {
+          "name": "uniform-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "uniform-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "frequency-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "frequency-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "two_target_example-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "two_target_example-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "causal-prefix",
+          "measured": 0.0,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "forward-probe",
+          "measured": 6.44473778e-06,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "causal-mask",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "forward-probe",
+          "measured": 6.2967022e-06,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "causal-mask",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-state-config_json",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-step",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-key",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-weights",
+          "measured": 0.0,
+          "tolerance": 1e-06
+        },
+        {
+          "name": "resume-adam-mu",
+          "measured": 0.0,
+          "tolerance": 1e-06
+        },
+        {
+          "name": "resume-adam-nu",
+          "measured": 0.0,
+          "tolerance": 1e-06
+        },
+        {
+          "name": "resume-losses",
+          "measured": 0.0,
+          "tolerance": 1e-06
+        },
+        {
+          "name": "target-alignment",
+          "measured": 8.11766498,
+          "tolerance": 0.0001
+        }
+      ]
+    },
+    {
+      "fixture": "fixtures/week8-wrong-weighting",
+      "exit": 1,
+      "verdict": "FAIL: token-weighting: 0.229681787 > 0.0001",
+      "checks": [
+        {
+          "name": "baseline-target-counts",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "training-frequencies",
+          "measured": 0.0,
+          "tolerance": 1e-08
+        },
+        {
+          "name": "uniform-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "uniform-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "frequency-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "frequency-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "two_target_example-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "two_target_example-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "causal-prefix",
+          "measured": 0.0,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "forward-probe",
+          "measured": 6.44473778e-06,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "causal-mask",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "forward-probe",
+          "measured": 6.2967022e-06,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "causal-mask",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-state-config_json",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-step",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-key",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-weights",
+          "measured": 0.0,
+          "tolerance": 1e-06
+        },
+        {
+          "name": "resume-adam-mu",
+          "measured": 0.0,
+          "tolerance": 1e-06
+        },
+        {
+          "name": "resume-adam-nu",
+          "measured": 0.0,
+          "tolerance": 1e-06
+        },
+        {
+          "name": "resume-losses",
+          "measured": 0.0,
+          "tolerance": 1e-06
+        },
+        {
+          "name": "target-alignment",
+          "measured": 6.55759779e-07,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "token-weighting",
+          "measured": 0.229681787,
+          "tolerance": 0.0001
+        }
+      ]
+    },
+    {
+      "fixture": "fixtures/week8-missing-optimizer",
+      "exit": 1,
+      "verdict": "FAIL: resume-weights: 0.00389658811 > 1e-06",
+      "checks": [
+        {
+          "name": "baseline-target-counts",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "training-frequencies",
+          "measured": 0.0,
+          "tolerance": 1e-08
+        },
+        {
+          "name": "uniform-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "uniform-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "frequency-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "frequency-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "two_target_example-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "two_target_example-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "causal-prefix",
+          "measured": 0.0,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "forward-probe",
+          "measured": 6.44473778e-06,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "causal-mask",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "forward-probe",
+          "measured": 6.2967022e-06,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "causal-mask",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-state-config_json",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-step",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-key",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-weights",
+          "measured": 0.00389658811,
+          "tolerance": 1e-06
+        }
+      ]
+    },
+    {
+      "fixture": "fixtures/week8-missing-key",
+      "exit": 1,
+      "verdict": "FAIL: resume-key: 1.10336313e+09 > 0",
+      "checks": [
+        {
+          "name": "baseline-target-counts",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "training-frequencies",
+          "measured": 0.0,
+          "tolerance": 1e-08
+        },
+        {
+          "name": "uniform-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "uniform-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "frequency-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "frequency-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "two_target_example-loss",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "two_target_example-ppl",
+          "measured": 0.0,
+          "tolerance": 0.0001
+        },
+        {
+          "name": "causal-prefix",
+          "measured": 0.0,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "forward-probe",
+          "measured": 6.44473778e-06,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "causal-mask",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "forward-probe",
+          "measured": 6.2967022e-06,
+          "tolerance": 0.0002
+        },
+        {
+          "name": "causal-mask",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-state-config_json",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-step",
+          "measured": 0.0,
+          "tolerance": 0.0
+        },
+        {
+          "name": "resume-key",
+          "measured": 1103363130.0,
+          "tolerance": 0.0
+        }
+      ]
+    }
+  ],
+  "comparison_matmul_precision": {
+    "baseline": "highest",
+    "narrow": "highest"
+  }
+}
