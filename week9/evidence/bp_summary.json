@@ -1,0 +1,26 @@
+[
+  {
+    "case": "Prior",
+    "converged": true,
+    "sweeps": 53,
+    "residual": 7.025592607678988e-11,
+    "max_marginal_error": 0.0033399000317007044,
+    "update_work": 13356
+  },
+  {
+    "case": "AD",
+    "converged": true,
+    "sweeps": 96,
+    "residual": 8.318729038947481e-11,
+    "max_marginal_error": 0.01140696149001065,
+    "update_work": 25728
+  },
+  {
+    "case": "ADX",
+    "converged": true,
+    "sweeps": 98,
+    "residual": 7.893491416055554e-11,
+    "max_marginal_error": 0.010611745185693744,
+    "update_work": 26852
+  }
+]

@@ -1,0 +1,87 @@
+==================================
+ WEEK 9: ASIA EXACT INFERENCE
+==================================
+Model: MARKOV
+Variables: 8
+Factors: 8
+UAI parser: PASS
+
+===== Matrix validation =====
+AB = [[4, 4], [10, 8]]
+tr(AB) = 12.000000000000000
+Max error = 0.000e0
+PASS
+
+===== Ising ring validation =====
+Enumeration Z = 12.602562098951928
+Tensor Z      = 12.602562098951932
+Reference Z   = 12.602562098951930
+Tensor error  = 3.553e-15
+PASS
+
+==================================
+CASE: prior
+==================================
+Evidence mass (enum)  = 1.000000000000
+Evidence mass (tensor)= 1.000000000000
+Reference mass error  = 0.000e0
+Relative mass error   = 0.000e0
+Max marginal error    = 2.220e-16
+Max joint error       = 2.220e-16
+
+Disease probabilities (state 0):
+P(T=0): enum=0.0104000000, tensor=0.0104000000
+P(L=0): enum=0.0550000000, tensor=0.0550000000
+P(B=0): enum=0.4500000000, tensor=0.4500000000
+
+T-L joint marginal (enumeration):
+0.0005720000 0.0098280000
+0.0544280000 0.9351720000
+Saved: artifacts/prior/run.json
+CASE prior: PASS
+
+==================================
+CASE: AD
+==================================
+Evidence mass (enum)  = 0.004501375000
+Evidence mass (tensor)= 0.004501375000
+Reference mass error  = 1.927e-16
+Relative mass error   = 1.927e-16
+Max marginal error    = 2.220e-16
+Max joint error       = 1.110e-16
+
+Disease probabilities (state 0):
+P(T=0): enum=0.0877509650, tensor=0.0877509650
+P(L=0): enum=0.0995251451, tensor=0.0995251451
+P(B=0): enum=0.8114020716, tensor=0.8114020716
+
+T-L joint marginal (enumeration):
+0.0049762573 0.0827747077
+0.0945488878 0.8177001472
+Saved: artifacts/AD/run.json
+CASE AD: PASS
+
+==================================
+CASE: ADX
+==================================
+Evidence mass (enum)  = 0.000988226750
+Evidence mass (tensor)= 0.000988226750
+Reference mass error  = 2.194e-16
+Relative mass error   = 2.194e-16
+Max marginal error    = 1.665e-16
+Max joint error       = 1.110e-16
+
+Disease probabilities (state 0):
+P(T=0): enum=0.3917117200, tensor=0.3917117200
+P(L=0): enum=0.4442705078, tensor=0.4442705078
+P(B=0): enum=0.6288217760, tensor=0.6288217760
+
+T-L joint marginal (enumeration):
+0.0222135254 0.3694981946
+0.4220569824 0.1862312976
+Saved: artifacts/ADX/run.json
+CASE ADX: PASS
+
+==================================
+ ALL EXACT-INFERENCE CHECKS PASSED
+==================================

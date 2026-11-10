@@ -1,0 +1,299 @@
+{
+  "version": 1,
+  "model": "asia.uai",
+  "evidence": {
+    "A": 0,
+    "D": 0
+  },
+  "method": "random",
+  "seed": 42,
+  "input_scopes": [
+    "a",
+    "ba",
+    "c",
+    "dc",
+    "ec",
+    "fdb",
+    "gf",
+    "hfe",
+    "a",
+    "h"
+  ],
+  "tree": {
+    "Node": {
+      "args": [
+        {
+          "Node": {
+            "args": [
+              {
+                "Leaf": {
+                  "tensor_index": 0
+                }
+              },
+              {
+                "Node": {
+                  "args": [
+                    {
+                      "Leaf": {
+                        "tensor_index": 4
+                      }
+                    },
+                    {
+                      "Node": {
+                        "args": [
+                          {
+                            "Leaf": {
+                              "tensor_index": 8
+                            }
+                          },
+                          {
+                            "Node": {
+                              "args": [
+                                {
+                                  "Leaf": {
+                                    "tensor_index": 1
+                                  }
+                                },
+                                {
+                                  "Leaf": {
+                                    "tensor_index": 5
+                                  }
+                                }
+                              ],
+                              "eins": {
+                                "ixs": [
+                                  [
+                                    "b",
+                                    "a"
+                                  ],
+                                  [
+                                    "f",
+                                    "d",
+                                    "b"
+                                  ]
+                                ],
+                                "iy": [
+                                  "a",
+                                  "f",
+                                  "d"
+                                ]
+                              }
+                            }
+                          }
+                        ],
+                        "eins": {
+                          "ixs": [
+                            [
+                              "a"
+                            ],
+                            [
+                              "a",
+                              "f",
+                              "d"
+                            ]
+                          ],
+                          "iy": [
+                            "a",
+                            "f",
+                            "d"
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "eins": {
+                    "ixs": [
+                      [
+                        "e",
+                        "c"
+                      ],
+                      [
+                        "a",
+                        "f",
+                        "d"
+                      ]
+                    ],
+                    "iy": [
+                      "e",
+                      "c",
+                      "a",
+                      "f",
+                      "d"
+                    ]
+                  }
+                }
+              }
+            ],
+            "eins": {
+              "ixs": [
+                [
+                  "a"
+                ],
+                [
+                  "e",
+                  "c",
+                  "a",
+                  "f",
+                  "d"
+                ]
+              ],
+              "iy": [
+                "e",
+                "c",
+                "f",
+                "d"
+              ]
+            }
+          }
+        },
+        {
+          "Node": {
+            "args": [
+              {
+                "Leaf": {
+                  "tensor_index": 2
+                }
+              },
+              {
+                "Node": {
+                  "args": [
+                    {
+                      "Leaf": {
+                        "tensor_index": 9
+                      }
+                    },
+                    {
+                      "Node": {
+                        "args": [
+                          {
+                            "Leaf": {
+                              "tensor_index": 6
+                            }
+                          },
+                          {
+                            "Node": {
+                              "args": [
+                                {
+                                  "Leaf": {
+                                    "tensor_index": 3
+                                  }
+                                },
+                                {
+                                  "Leaf": {
+                                    "tensor_index": 7
+                                  }
+                                }
+                              ],
+                              "eins": {
+                                "ixs": [
+                                  [
+                                    "d",
+                                    "c"
+                                  ],
+                                  [
+                                    "h",
+                                    "f",
+                                    "e"
+                                  ]
+                                ],
+                                "iy": [
+                                  "d",
+                                  "c",
+                                  "h",
+                                  "f",
+                                  "e"
+                                ]
+                              }
+                            }
+                          }
+                        ],
+                        "eins": {
+                          "ixs": [
+                            [
+                              "g",
+                              "f"
+                            ],
+                            [
+                              "d",
+                              "c",
+                              "h",
+                              "f",
+                              "e"
+                            ]
+                          ],
+                          "iy": [
+                            "f",
+                            "d",
+                            "c",
+                            "h",
+                            "e"
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "eins": {
+                    "ixs": [
+                      [
+                        "h"
+                      ],
+                      [
+                        "f",
+                        "d",
+                        "c",
+                        "h",
+                        "e"
+                      ]
+                    ],
+                    "iy": [
+                      "f",
+                      "d",
+                      "c",
+                      "e"
+                    ]
+                  }
+                }
+              }
+            ],
+            "eins": {
+              "ixs": [
+                [
+                  "c"
+                ],
+                [
+                  "f",
+                  "d",
+                  "c",
+                  "e"
+                ]
+              ],
+              "iy": [
+                "c",
+                "f",
+                "d",
+                "e"
+              ]
+            }
+          }
+        }
+      ],
+      "eins": {
+        "ixs": [
+          [
+            "e",
+            "c",
+            "f",
+            "d"
+          ],
+          [
+            "c",
+            "f",
+            "d",
+            "e"
+          ]
+        ],
+        "iy": []
+      }
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "method": "random",
+  "seed": 42,
+  "replay_evidence_mass": 0.004501375,
+  "enumeration_evidence_mass": 0.004501374999999999,
+  "relative_error": 1.9268817594366247e-16,
+  "passed": true
+}

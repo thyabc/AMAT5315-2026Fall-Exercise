@@ -1,0 +1,32 @@
+WEEK 9 PROMEDUS PATCH
+
+Extract this ZIP into the root of your existing week9 folder, preserving folder structure.
+It adds:
+  src/bin/promedus.rs
+  plot_promedus.py
+  README.md
+
+No Cargo.toml changes are needed: Cargo automatically discovers src/bin/promedus.rs.
+No existing ASIA source files are overwritten.
+
+After extraction, open WSL in the week9 directory and run:
+
+  cargo +1.96.0 check --bin promedus
+
+If the check succeeds, run the full Promedus workflow:
+
+  cargo +1.96.0 run --release --bin promedus -- all
+
+Or run the stages separately:
+
+  cargo +1.96.0 run --release --bin promedus -- exact
+  cargo +1.96.0 run --release --bin promedus -- bp
+
+Then generate the plots:
+
+  python3 plot_promedus.py
+
+Important:
+The new Rust source has been reviewed against your uploaded source bundle and the pinned crate APIs,
+but this environment does not contain rustc/cargo, so it has NOT been compiled here. Run the cargo
+check first. If it reports an error, send the complete terminal output so the exact issue can be fixed.

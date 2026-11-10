@@ -1,0 +1,79 @@
+{
+  "method": "random",
+  "work": 248,
+  "largest_tensor_elements": 32,
+  "steps": [
+    {
+      "step": 1,
+      "left_labels": "ba",
+      "right_labels": "fdb",
+      "retained_labels": "afd",
+      "work": 16,
+      "output_elements": 8
+    },
+    {
+      "step": 2,
+      "left_labels": "a",
+      "right_labels": "afd",
+      "retained_labels": "afd",
+      "work": 8,
+      "output_elements": 8
+    },
+    {
+      "step": 3,
+      "left_labels": "ec",
+      "right_labels": "afd",
+      "retained_labels": "ecafd",
+      "work": 32,
+      "output_elements": 32
+    },
+    {
+      "step": 4,
+      "left_labels": "a",
+      "right_labels": "ecafd",
+      "retained_labels": "ecfd",
+      "work": 32,
+      "output_elements": 16
+    },
+    {
+      "step": 5,
+      "left_labels": "dc",
+      "right_labels": "hfe",
+      "retained_labels": "dchfe",
+      "work": 32,
+      "output_elements": 32
+    },
+    {
+      "step": 6,
+      "left_labels": "gf",
+      "right_labels": "dchfe",
+      "retained_labels": "fdche",
+      "work": 64,
+      "output_elements": 32
+    },
+    {
+      "step": 7,
+      "left_labels": "h",
+      "right_labels": "fdche",
+      "retained_labels": "fdce",
+      "work": 32,
+      "output_elements": 16
+    },
+    {
+      "step": 8,
+      "left_labels": "c",
+      "right_labels": "fdce",
+      "retained_labels": "cfde",
+      "work": 16,
+      "output_elements": 16
+    },
+    {
+      "step": 9,
+      "left_labels": "ecfd",
+      "right_labels": "cfde",
+      "retained_labels": "",
+      "work": 16,
+      "output_elements": 1
+    }
+  ]
+}

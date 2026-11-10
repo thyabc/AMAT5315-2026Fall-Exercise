@@ -1,0 +1,79 @@
+{
+  "method": "greedy",
+  "work": 70,
+  "largest_tensor_elements": 8,
+  "steps": [
+    {
+      "step": 1,
+      "left_labels": "c",
+      "right_labels": "dc",
+      "retained_labels": "cd",
+      "work": 4,
+      "output_elements": 4
+    },
+    {
+      "step": 2,
+      "left_labels": "ec",
+      "right_labels": "cd",
+      "retained_labels": "ed",
+      "work": 8,
+      "output_elements": 4
+    },
+    {
+      "step": 3,
+      "left_labels": "a",
+      "right_labels": "a",
+      "retained_labels": "a",
+      "work": 2,
+      "output_elements": 2
+    },
+    {
+      "step": 4,
+      "left_labels": "ba",
+      "right_labels": "a",
+      "retained_labels": "b",
+      "work": 4,
+      "output_elements": 2
+    },
+    {
+      "step": 5,
+      "left_labels": "fdb",
+      "right_labels": "b",
+      "retained_labels": "fd",
+      "work": 8,
+      "output_elements": 4
+    },
+    {
+      "step": 6,
+      "left_labels": "gf",
+      "right_labels": "fd",
+      "retained_labels": "gfd",
+      "work": 8,
+      "output_elements": 8
+    },
+    {
+      "step": 7,
+      "left_labels": "ed",
+      "right_labels": "gfd",
+      "retained_labels": "egf",
+      "work": 16,
+      "output_elements": 8
+    },
+    {
+      "step": 8,
+      "left_labels": "hfe",
+      "right_labels": "egf",
+      "retained_labels": "hg",
+      "work": 16,
+      "output_elements": 4
+    },
+    {
+      "step": 9,
+      "left_labels": "h",
+      "right_labels": "hg",
+      "retained_labels": "",
+      "work": 4,
+      "output_elements": 1
+    }
+  ]
+}

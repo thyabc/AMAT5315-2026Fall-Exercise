@@ -1,0 +1,81 @@
+{
+  "model": "Promedus_14.uai",
+  "variables": 414,
+  "original_factor_count": 414,
+  "reduced_non_scalar_factor_count": 413,
+  "scalar_factor_count": 1,
+  "scalar_factor_values": [
+    0.5
+  ],
+  "evidence": {
+    "4": 1,
+    "14": 1,
+    "26": 1,
+    "28": 1,
+    "29": 1,
+    "41": 1,
+    "47": 1,
+    "123": 1,
+    "147": 1
+  },
+  "treesa_seed": 42,
+  "treesa_ntrials": 1,
+  "treesa_niters_per_beta": 50,
+  "treesa_beta_levels": 300,
+  "greedy": {
+    "method": "omeco GreedyMethod",
+    "work": 224845616,
+    "largest_tensor_elements": 2097152,
+    "planning_seconds": 0.031966632,
+    "contraction_seconds": 0.736595033,
+    "log10_partition_sum": -7.806746304582435
+  },
+  "treesa": {
+    "method": "omeco TreeSA with ScoreFunction::time_optimized",
+    "work": 10525886,
+    "largest_tensor_elements": 131072,
+    "planning_seconds": 1.322805408,
+    "contraction_seconds": 0.145371154,
+    "log10_partition_sum": -7.806746304582437
+  },
+  "greedy_treesa_log10_absolute_difference": 1.7763568394002505e-15,
+  "published_pr_log10": -7.80675,
+  "published_pr_absolute_error": 3.6954175648418186e-6,
+  "marginals": {
+    "102": {
+      "state0": 0.8502465676808096,
+      "state1": 0.14975343231919028,
+      "treesa_state0": 0.8502465676808093,
+      "treesa_state1": 0.1497534323191906,
+      "reference_state0": 0.850247,
+      "reference_state1": 0.149753,
+      "state0_absolute_error": 4.3231919033548394e-7,
+      "state1_absolute_error": 4.323191902799728e-7,
+      "greedy_treesa_max_absolute_difference": 3.3306690738754696e-16
+    },
+    "139": {
+      "state0": 0.3824779816191093,
+      "state1": 0.6175220183808907,
+      "treesa_state0": 0.38247798161910934,
+      "treesa_state1": 0.6175220183808906,
+      "reference_state0": 0.382478,
+      "reference_state1": 0.617522,
+      "state0_absolute_error": 1.838089069838844e-8,
+      "state1_absolute_error": 1.838089069838844e-8,
+      "greedy_treesa_max_absolute_difference": 1.1102230246251565e-16
+    },
+    "59": {
+      "state0": 0.8024117418110255,
+      "state1": 0.19758825818897455,
+      "treesa_state0": 0.8024117418110254,
+      "treesa_state1": 0.19758825818897469,
+      "reference_state0": 0.802412,
+      "reference_state1": 0.197588,
+      "state0_absolute_error": 2.5818897453344647e-7,
+      "state1_absolute_error": 2.5818897453344647e-7,
+      "greedy_treesa_max_absolute_difference": 1.3877787807814457e-16
+    }
+  },
+  "maximum_greedy_treesa_marginal_difference": 3.3306690738754696e-16,
+  "maximum_mar_absolute_error": 4.3231919066855085e-7
+}

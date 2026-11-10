@@ -1,0 +1,36 @@
+{
+  "greedy_absolute_errors": [
+    2.5818897453344647e-7,
+    2.5818897453344647e-7
+  ],
+  "greedy_contraction_seconds": 5.002441324,
+  "greedy_largest_tensor_elements": 134217728,
+  "greedy_planning_seconds": 0.007937388,
+  "greedy_probabilities": [
+    0.8024117418110255,
+    0.19758825818897455
+  ],
+  "greedy_treesa_max_absolute_difference": 1.3877787807814457e-16,
+  "greedy_work": 35642750936,
+  "reference_mar": [
+    0.802412,
+    0.197588
+  ],
+  "state_order": [
+    0,
+    1
+  ],
+  "treesa_absolute_errors": [
+    2.5818897464446877e-7,
+    2.5818897467222435e-7
+  ],
+  "treesa_contraction_seconds": 0.118115987,
+  "treesa_largest_tensor_elements": 262144,
+  "treesa_planning_seconds": 1.522703726,
+  "treesa_probabilities": [
+    0.8024117418110254,
+    0.19758825818897469
+  ],
+  "treesa_work": 11564638,
+  "variable_id": 59
+}

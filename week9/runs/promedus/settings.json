@@ -1,0 +1,18 @@
+{
+  "evidence": "promedus/Promedus_14.uai.evid",
+  "model": "promedus/Promedus_14.uai",
+  "numeric_stability": "Every input factor and intermediate tensor is divided by its maximum absolute entry; log multipliers are accumulated and restored in log10(Z).",
+  "published_mar": "promedus/Promedus_14.uai.MAR",
+  "published_pr": "promedus/Promedus_14.uai.PR",
+  "tensor_labels": "u32 integer labels through tenferro_einsum::EinsumSubscripts",
+  "treesa": {
+    "beta_levels": 300,
+    "crate": "omeco 0.2.6",
+    "niters_per_beta": 50,
+    "ntrials": 1,
+    "objective": "time-only",
+    "score": "ScoreFunction::time_optimized()",
+    "seed": 42,
+    "seed_policy": "SmallRng::seed_from_u64(trial_index + 42)"
+  }
+}

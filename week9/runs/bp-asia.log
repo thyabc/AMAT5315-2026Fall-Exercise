@@ -1,0 +1,84 @@
+====================================
+ WEEK 9: ASIA LOOPY BELIEF PROPAGATION
+====================================
+Damping: 0.5
+Tolerance: 1.0e-10
+Maximum sweeps: 1000
+
+====================================
+BP CASE: prior
+====================================
+prior sweep    0: residual=4.9000e-1, marginal_error=4.900000e-1, update_work=0
+prior sweep   10: residual=1.2786e-1, marginal_error=2.611607e-1, update_work=2520
+prior sweep   20: residual=4.1090e-3, marginal_error=5.554606e-3, update_work=5040
+prior sweep   30: residual=2.9634e-5, marginal_error=3.354359e-3, update_work=7560
+prior sweep   40: residual=1.2681e-7, marginal_error=3.339959e-3, update_work=10080
+prior sweep   50: residual=4.0863e-10, marginal_error=3.339900e-3, update_work=12600
+prior sweep   53: residual=7.0256e-11, marginal_error=3.339900e-3, update_work=13356
+
+===== BP SUMMARY: prior =====
+Converged: true
+Sweeps: 53
+Final undamped residual: 7.025593e-11
+Maximum marginal error: 3.339900e-3
+Cumulative update work: 13356
+P(B=0) = 0.4500000000
+P(L=0) = 0.0550000000
+P(T=0) = 0.0104000000
+Saved artifacts/bp-prior/run.json
+
+====================================
+BP CASE: AD
+====================================
+AD sweep    0: residual=5.0000e-1, marginal_error=5.000000e-1, update_work=0
+AD sweep   10: residual=1.1507e-1, marginal_error=2.348233e-1, update_work=2680
+AD sweep   20: residual=8.8897e-3, marginal_error=8.442214e-3, update_work=5360
+AD sweep   30: residual=1.0648e-3, marginal_error=1.163668e-2, update_work=8040
+AD sweep   40: residual=6.4137e-5, marginal_error=1.143417e-2, update_work=10720
+AD sweep   50: residual=7.0570e-6, marginal_error=1.140594e-2, update_work=13400
+AD sweep   60: residual=4.4546e-7, marginal_error=1.140675e-2, update_work=16080
+AD sweep   70: residual=4.3224e-8, marginal_error=1.140696e-2, update_work=18760
+AD sweep   80: residual=2.9618e-9, marginal_error=1.140696e-2, update_work=21440
+AD sweep   90: residual=2.4162e-10, marginal_error=1.140696e-2, update_work=24120
+AD sweep   96: residual=8.3187e-11, marginal_error=1.140696e-2, update_work=25728
+
+===== BP SUMMARY: AD =====
+Converged: true
+Sweeps: 96
+Final undamped residual: 8.318729e-11
+Maximum marginal error: 1.140696e-2
+Cumulative update work: 25728
+P(B=0) = 0.8025322226
+P(L=0) = 0.1109321066
+P(T=0) = 0.0859635922
+Saved artifacts/bp-AD/run.json
+
+====================================
+BP CASE: ADX
+====================================
+ADX sweep    0: residual=5.0000e-1, marginal_error=5.000000e-1, update_work=0
+ADX sweep   10: residual=1.1507e-1, marginal_error=2.562846e-1, update_work=2740
+ADX sweep   20: residual=2.2512e-2, marginal_error=1.790052e-2, update_work=5480
+ADX sweep   30: residual=1.8709e-3, marginal_error=9.735535e-3, update_work=8220
+ADX sweep   40: residual=1.6683e-4, marginal_error=1.065711e-2, update_work=10960
+ADX sweep   50: residual=1.3131e-5, marginal_error=1.061952e-2, update_work=13700
+ADX sweep   60: residual=1.1955e-6, marginal_error=1.061159e-2, update_work=16440
+ADX sweep   70: residual=8.7217e-8, marginal_error=1.061169e-2, update_work=19180
+ADX sweep   80: residual=8.1644e-9, marginal_error=1.061175e-2, update_work=21920
+ADX sweep   90: residual=5.4108e-10, marginal_error=1.061175e-2, update_work=24660
+ADX sweep   98: residual=7.8935e-11, marginal_error=1.061175e-2, update_work=26852
+
+===== BP SUMMARY: ADX =====
+Converged: true
+Sweeps: 98
+Final undamped residual: 7.893491e-11
+Maximum marginal error: 1.061175e-2
+Cumulative update work: 26852
+P(B=0) = 0.6250939871
+P(L=0) = 0.4458831836
+P(T=0) = 0.3810999748
+Saved artifacts/bp-ADX/run.json
+
+====================================
+ ALL BP CASES FINISHED
+====================================
