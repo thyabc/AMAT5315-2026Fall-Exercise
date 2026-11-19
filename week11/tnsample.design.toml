@@ -1,0 +1,73 @@
+usage = "tnsample --mode gadgets --seed 2026 --out runs/gadgets"
+description = "Hard problems as magnets and tensor networks; no unstated defaults"
+
+[args]
+seed = "random seed, recorded with the run"
+out = "directory for this run's raw evidence"
+input = "SpinGlass reduction bundle written by pred reduce"
+order = "omeco contraction-order optimizer: greedy or treesa; default treesa"
+beta = "inverse temperature for Boltzmann weights; default 2.0"
+samples = "number of independent Boltzmann samples; default 2000"
+l = "side length of an open square lattice"
+p-af = "probability of antiferromagnetic bonds J=-1 on the lattice; default 0"
+n = "board size N for the N-queens carry network"
+
+[args.gadgets]
+mode = """
+gadgets: with bits x as spins s = 2x - 1, enumerate every state of each gate
+energy below. Report the energy of every truth-table row, minimized over the
+helper spin w for XOR.
+
+AND(a,b,z)    s_a s_b - 2 s_a s_z - 2 s_b s_z - s_a - s_b + 2 s_z
+OR(a,b,z)     s_a s_b - 2 s_a s_z - 2 s_b s_z + s_a + s_b - 2 s_z
+NOT(a,z)      s_a s_z
+COPY(a,z)     -s_a s_z
+SET0(z)       s_z
+SET1(z)       -s_z
+XOR(a,b,z,w)  s_a s_b - s_a s_z - 2 s_a s_w - s_b s_z
+              - 2 s_b s_w + 2 s_z s_w - s_a - s_b + s_z + 2 s_w
+
+Also enumerate the circuit AND(a,b,t) + NOT(t,out) + SET1(out)
+and report the energy of each of its 16 states.
+"""
+
+[args.plan]
+mode = """
+plan: optimize a contraction tree with omeco without contracting tensors.
+With --input, report number of variables, time complexity tc and space
+complexity sc (both in log2 scale), plus read-write complexity rwc.
+"""
+
+[args.count]
+mode = """
+count: contract a SpinGlass bundle (--input) or open lattice (--l, --p-af).
+Report log Z at --beta and the exact minimum energy and ground-state
+ degeneracy using min-plus (energy,count) contraction.
+For a pred bundle, use +sum K_ij s_i s_j + sum h_i s_i; for the open
+lattice use -sum J_ij s_i s_j.
+"""
+
+[args.sample]
+mode = """
+sample: for a SpinGlass bundle (--input), perform one upward Boltzmann
+contraction and draw --samples independent configurations by walking the
+stored contraction tree downward. Record every sample and its energy.
+Write best_config.txt as a comma-separated 0/1 target configuration for
+pred extract --config.
+"""
+
+[writes]
+stdout = "one tab-separated table with a header: mode, metric, value, runtime_ms"
+"<out>/run.json" = "full-precision run evidence, parameters, summaries and samples"
+
+
+[args.nqueens]
+n = """
+Board size N of the N-queens carry network for plan, count and sample.
+Each square has one bit x and four carry tensors T(c_in, x, c_out) for its row,
+its column and each diagonal, equal to 1 at (0,0,0), (0,1,1), (1,0,1) and 0
+elsewhere. Rows and columns start at carry 0 and must end at 1; diagonals start
+at 0 and may end at 0 or 1.
+In count mode, contract only nonzero entries and report the exact board count.
+In sample mode, draw --samples valid boards uniformly from the stored tree.
+"""
