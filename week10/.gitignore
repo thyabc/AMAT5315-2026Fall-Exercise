@@ -1,0 +1,7 @@
+/target/
+/runs/
+/artifacts/*.png
+*.bin
+*.tar.gz
+*.zip
+/coarse_peak_estimates*.csv

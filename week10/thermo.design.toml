@@ -1,0 +1,24 @@
+usage = "thermo --method boundary --l 64 --k 0.45 --chi 16 --out runs/boundary64"
+description = '''Compute the zero-field square-lattice Ising partition function with explicit geometry and truncation settings.'''
+
+[args]
+l = "Side length of the square lattice, at least 2"
+k = "Inverse temperature K=1/T, with J=k_B=1 and K>=0"
+chi = "Maximum retained bond dimension, at least 1"
+out = "Directory for this run's raw numerical evidence"
+
+[args.boundary]
+method = "boundary: absorb rows with an MPS on an open square"
+
+[writes]
+evidence = '''Save the model, geometry, settings, log Z, g=log(Z)/L^2, and solver time.
+Write final tensors, normalization scales, and truncation diagnostics.
+Keep full floating-point precision in saved evidence.
+Record enough information to recompute the final contraction independently.'''
+
+[args.trg]
+method = "trg: coarse-grain a periodic square; L must be a power of two"
+
+[writes.trg]
+evidence = '''Save each step's normalization scale, split factors, singular values,
+and the final tensor. Record the periodic closure, log Z, g, and solver time.'''
