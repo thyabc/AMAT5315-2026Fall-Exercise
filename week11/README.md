@@ -134,6 +134,10 @@ exactly **3 of its 16 states**. These are the input assignments `00`,
 The figure marks valid and invalid truth-table rows and shows the energy
 of all 16 circuit states.
 
+**Part 2 figure — Logic-gate energies and the combined circuit**
+
+![Part 2: logic-gate gadget energies and the three-gate circuit](artifacts/gates.png)
+
 ------------------------------------------------------------------------
 
 ## 4. Part 3 — Factor 15 by tensor-network contraction
@@ -252,6 +256,10 @@ For the 2000-sample run:
 
 The observed frequency is close to the theoretical prediction.
 
+**Part 3 figure — Factor 15 contraction cost and sampled energy distribution**
+
+![Part 3: Factor 15 contraction memory cost and sampled states](artifacts/factoring.png)
+
 The contraction-cost figure compares the `sc` values produced by
 `greedy` and `treesa` for `k = 2` to `8`. The TreeSA planner
 substantially reduces the largest intermediate tensor compared with the
@@ -358,6 +366,10 @@ For `N = 8`, the 200 samples visited **78 distinct valid boards**. All
 sampled boards passed the row, column, and diagonal validity checks. The
 expected number of distinct boards is approximately 82.
 
+**Part 4 figure — Exact N-Queens counts and sampled 6-Queens boards**
+
+![Part 4: exact N-Queens counts and 200 sampled 6-Queens boards](artifacts/nqueens.png)
+
 ### Output
 
 - Exact-count evidence: `runs/count_nqN/run.json`
@@ -379,12 +391,13 @@ The three figures required for the Week 11 presentation are:
 
 The corresponding raw run evidence is stored under `runs/`. The JSON
 files preserve run parameters, summaries, and the data used by the
-plotting scripts.
+plotting scripts. The three final PNG figures are embedded above using
+relative paths, so the PNG files must also be committed to GitHub for
+them to appear when someone opens this README.
 
-Keep the `runs/` and `artifacts/` directories locally so the figures and
-results can be reproduced. They are generated experiment evidence and
-should not be included in the source-code commit unless specifically
-requested.
+Keep the raw `runs/` directory out of Git unless it is specifically
+requested. Commit the three final figures in `artifacts/`:
+`gates.png`, `factoring.png`, and `nqueens.png`.
 
 ## 7. Reproduce all three figures
 
@@ -402,15 +415,26 @@ under `artifacts/`.
 
 ## 8. Git submission
 
-The source code, design file, plotting scripts, and README are the files
-to commit and push. Keep generated `runs/` and `artifacts/` data out of
-Git.
+The source code, design file, plotting scripts, README, and the three
+final PNG figures are the files to commit and push. Keep the raw
+generated `runs/` data out of Git.
 
-For a README-only update after the main project commit:
+To publish the updated README together with its images, run this from
+the `week11/` directory:
+
+``` bash
+git add README.md artifacts/gates.png artifacts/factoring.png artifacts/nqueens.png
+git commit -m "Add Week 11 figures to README"
+git push
+```
+
+If Git reports that the PNG files are ignored, force-add only these
+three final figures:
 
 ``` bash
 git add README.md
-git commit -m "Complete Week 11 README"
+git add -f artifacts/gates.png artifacts/factoring.png artifacts/nqueens.png
+git commit -m "Add Week 11 figures to README"
 git push
 ```
 
@@ -419,6 +443,7 @@ script files as well:
 
 ``` bash
 git add Cargo.toml Cargo.lock src/main.rs tnsample.design.toml scripts README.md
+git add artifacts/gates.png artifacts/factoring.png artifacts/nqueens.png
 git commit -m "Complete Week 11 tensor network exercise"
 git push
 ```
