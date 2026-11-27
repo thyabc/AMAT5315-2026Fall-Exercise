@@ -131,3 +131,44 @@ and the figure from raw JSON. It is not a substitute for the formal n=22 local
 experiments. The bootstrap runs the formal dataset and unseen evaluation on the
 user's computer and saves the actual results, including any failed criterion.
 <!-- WEEK12_PART3_END -->
+
+<!-- WEEK12_PART4_BEGIN -->
+## Part 4: DeepSeek review of root caching and timing excerpts
+
+On 2026-11-27, ChatGPT sent the actual new root-cache, population-normalization
+and branch-selection snippets plus the timing/call-count contract to DeepSeek:
+https://chat.deepseek.com/a/chat/s/fc47b89b-c851-4ed2-a26b-c7409e906862
+
+Scope: independent static review of the displayed excerpts, not full-source
+inspection or program execution. DeepSeek reported no definite error, with four
+points to verify. Their dispositions were checked against the full source:
+
+1. **Finite root features without an incumbent.** feature_rows already assigns
+   gap_ratio=1 when the incumbent is not finite, avoiding infinity/infinity.
+   Network inputs/outputs and standardized root scores are checked for finite
+   values. The feature example explicitly uses an infinite initial incumbent.
+2. **Cache indices.** all_spins is exactly 0..n, feature_rows maps the supplied
+   indices in order, and scores preserves that row order. The cache has length
+   n. The independent Python audit recomputes every root-policy branch choice
+   from the saved cache and current LP fractions; the small Rust test does so
+   independently through actual search traces as well.
+3. **Raw-score evidence.** Full code stores both root_raw_scores and root_scores
+   in the search result. Python recomputes population normalization from raw
+   logits. Creating these records is inside the search; writing final JSON is
+   outside its timer.
+4. **Per-search counters, feasibility and model guards.** Caches, counts and
+   timers are local variables initialized by every search invocation. Model
+   presence is checked before entering either neural policy. For this spin-glass
+   model the initial box is always feasible (for example all x=0,z=0), so every
+   root-policy course instance executes exactly one feature and forward call.
+   This is not a claim for arbitrary infeasible integer programs. Counters and
+   solve accounting are checked from actual evidence.
+
+Pre-delivery development validation passed five Rust tests and a separate
+two-size n=6/n=8 inference/evaluation/plot pipeline using the prior small-graph
+development model. Both learned policies retained exactness, zero trial LPs,
+valid timing components and correct root-cache behavior. No course n=22/n=30
+experiment was substituted for the user's local run. The final bootstrap uses
+the user's unchanged trained model, preserves raw results before performance
+checks, and generates its result tables only from those local files.
+<!-- WEEK12_PART4_END -->

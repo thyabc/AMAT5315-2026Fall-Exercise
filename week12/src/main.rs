@@ -160,7 +160,7 @@ fn arguments() -> Result<Args> {
     let mut it = env::args().skip(1);
     while let Some(k) = it.next() {
         if k == "--help" {
-            println!("branchopt --mode gap|bnb|eval --policy most-frac|strong|neural --export-labels --model artifacts/model.json --spins 22 --edges 52 --count 48 --seed 2026 --out artifacts/bnb_strong");
+            println!("branchopt --mode gap|bnb|eval --policy most-frac|strong|neural|root-neural --export-labels --model artifacts/model.json --spins 22 --edges 52 --count 48 --seed 2026 --out artifacts/bnb_strong");
             std::process::exit(0);
         }
         if k == "--export-labels" { a.export_labels = true; continue; }
@@ -174,11 +174,11 @@ fn arguments() -> Result<Args> {
         }
     }
     check(["gap","bnb","eval"].contains(&a.mode.as_str()), "supported modes: gap | bnb | eval")?;
-    check(["most-frac","strong","neural"].contains(&a.policy.as_str()), "unsupported branching policy")?;
+    check(["most-frac","strong","neural","root-neural"].contains(&a.policy.as_str()), "unsupported branching policy")?;
     check(!a.export_labels || (a.mode=="bnb" && a.policy=="strong" && a.count<=48),
           "--export-labels requires bnb mode, strong policy and count<=48")?;
-    check((a.mode!="eval" && a.policy!="neural") || a.model.is_some(),
-          "neural policy and eval mode require --model")?;
+    check((a.mode!="eval" && !["neural","root-neural"].contains(&a.policy.as_str())) || a.model.is_some(),
+          "neural/root-neural policies and eval mode require --model")?;
     check(a.spins >= 3 && a.spins <= 10000 && a.count > 0, "invalid spins or count")?;
     check(a.edges >= a.spins && a.edges <= a.spins * (a.spins - 1) / 2,
           "edge count must be between n and n*(n-1)/2")?;

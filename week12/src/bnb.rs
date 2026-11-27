@@ -83,12 +83,23 @@ struct SearchResult {
     energy: f64, bits: Vec<u8>, nodes: usize, lp_solves: usize,
     node_lp_solves: usize, trial_lp_solves: usize,
     total_ms: f64, lp_ms: f64, inference_ms: f64, first_splits: Vec<usize>, trace: Vec<Value>,
+    feature_calls: usize, inference_calls: usize,
+    root_raw_scores: Option<Vec<f64>>, root_scores: Option<Vec<f64>>,
     #[serde(skip_serializing)] labels: Vec<LabelNode>,
 }
 
+fn standardized_root_scores(raw: &[f64]) -> Result<Vec<f64>> {
+    check(!raw.is_empty() && raw.iter().all(|v|v.is_finite()), "invalid root logits")?;
+    let average=raw.iter().sum::<f64>()/raw.len() as f64;
+    let std=(raw.iter().map(|v|(v-average).powi(2)).sum::<f64>()/raw.len() as f64).sqrt();
+    let scaled:Vec<f64>=raw.iter().map(|v|(v-average)/std.max(1e-6)).collect();
+    check(scaled.iter().all(|v|v.is_finite()), "invalid standardized root scores")?;
+    Ok(scaled)
+}
+
 fn search(g: &Graph, policy: &str, model: Option<&nn::Network>, export_labels: bool) -> Result<SearchResult> {
-    check(["most-frac","strong","neural"].contains(&policy), "unsupported B&B policy")?;
-    check(policy!="neural" || model.is_some(), "neural policy requires a model")?;
+    check(["most-frac","strong","neural","root-neural"].contains(&policy), "unsupported B&B policy")?;
+    check(!["neural","root-neural"].contains(&policy) || model.is_some(), "learned policy requires a model")?;
     let start = Instant::now();
     let mut stack = vec![Node { fixed: vec![-1;g.n], parent: None, depth: 0, branch: None }];
     let mut incumbent = f64::INFINITY;
@@ -99,6 +110,9 @@ fn search(g: &Graph, policy: &str, model: Option<&nn::Network>, export_labels: b
     let mut first_splits = Vec::new();
     let mut labels=Vec::new();
     let mut inference_ms=0.0;
+    let (mut feature_calls,mut inference_calls)=(0usize,0usize);
+    let mut root_raw_scores=None;
+    let mut root_scores:Option<Vec<f64>>=None;
     while let Some(node) = stack.pop() {
         nodes += 1;
         let lp_start = Instant::now();
@@ -120,6 +134,17 @@ fn search(g: &Graph, policy: &str, model: Option<&nn::Network>, export_labels: b
             trace.push(audit);
             continue;
         }
+        if policy=="root-neural" && node.depth==0 {
+            let t=Instant::now();
+            let all_spins:Vec<usize>=(0..g.n).collect();
+            let root_features=feature_rows(g,&lp,&node.fixed,incumbent,&all_spins);
+            feature_calls+=1;
+            let raw=model.unwrap().scores(&root_features)?;
+            inference_calls+=1;
+            root_scores=Some(standardized_root_scores(&raw)?);
+            root_raw_scores=Some(raw);
+            inference_ms+=t.elapsed().as_secs_f64()*1e3;
+        }
         let candidates: Vec<usize> = (0..g.n).filter(|&i|
             node.fixed[i]<0 && lp.x[i]>EPS && lp.x[i]<1.0-EPS).collect();
         if candidates.is_empty() {
@@ -139,6 +164,7 @@ fn search(g: &Graph, policy: &str, model: Option<&nn::Network>, export_labels: b
         if record_label || policy=="neural" {
             let t=Instant::now();
             features=feature_rows(g,&lp,&node.fixed,incumbent,&candidates);
+            feature_calls+=1;
             inference_ms+=t.elapsed().as_secs_f64()*1e3;
         }
         let mut chosen = candidates[0];
@@ -182,11 +208,22 @@ fn search(g: &Graph, policy: &str, model: Option<&nn::Network>, export_labels: b
         if policy=="neural" {
             let t=Instant::now();
             let scores=model.unwrap().scores(&features)?;
+            inference_calls+=1;
             let mut best=f64::NEG_INFINITY;
             for (k,&score) in scores.iter().enumerate() {
                 if score>best+TIE {best=score;chosen=candidates[k];}
             }
             inference_ms+=t.elapsed().as_secs_f64()*1e3;
+        }
+        if policy=="root-neural" {
+            let cached=root_scores.as_ref().ok_or_else(||fail("missing root score cache"))?;
+            let mut best=f64::NEG_INFINITY;
+            for &i in &candidates {
+                let score=cached[i]+3.0*2.0*lp.x[i].min(1.0-lp.x[i]);
+                if score>best+TIE {best=score;chosen=i;}
+            }
+            audit["cached_root_score"]=json!(cached[chosen]);
+            audit["branch_score"]=json!(best);
         }
         if record_label {
             let gains:Vec<[f64;2]>=strong_audit.iter().map(|v|[
@@ -217,7 +254,8 @@ fn search(g: &Graph, policy: &str, model: Option<&nn::Network>, export_labels: b
     let total_ms=start.elapsed().as_secs_f64()*1e3;
     check(incumbent.is_finite() && best_bits.len()==g.n,"search finished without a feasible incumbent")?;
     Ok(SearchResult { energy:incumbent,bits:best_bits,nodes,lp_solves:nodes+trials,
-        node_lp_solves:nodes,trial_lp_solves:trials,total_ms,lp_ms,inference_ms,first_splits,trace,labels })
+        node_lp_solves:nodes,trial_lp_solves:trials,total_ms,lp_ms,inference_ms,first_splits,trace,
+        feature_calls,inference_calls,root_raw_scores,root_scores,labels })
 }
 
 fn workshop_trace() -> Result<Value> {
@@ -371,11 +409,11 @@ pub(super) fn evaluate(a:&Args) -> Result<()> {
     let parity=network.verify_probes()?;
     fs::write(a.out.join("parity.json"),serde_json::to_vec_pretty(&parity)?)?;
     check(parity.max_probability_error<1e-4,"JAX/Rust probability parity failed")?;
-    let policies=["most-frac","strong","neural"];
+    let policies=["most-frac","strong","neural","root-neural"];
     let start=Instant::now();
     let mut rows=Vec::new();
-    let mut counts=vec![0.0;3]; let mut times=vec![0.0;3]; let mut solves=vec![0.0;3];
-    let mut lp_times=vec![0.0;3]; let mut inference_times=vec![0.0;3];
+    let mut counts=vec![0.0;4]; let mut times=vec![0.0;4]; let mut solves=vec![0.0;4];
+    let mut lp_times=vec![0.0;4]; let mut inference_times=vec![0.0;4];
     let mut max_error=0.0_f64; let mut accounting=true;
     for id in 0..a.count {
         let (instance_seed,graph)=generate(a.spins,a.edges,a.seed,id)?;
@@ -387,7 +425,8 @@ pub(super) fn evaluate(a:&Args) -> Result<()> {
             max_error=max_error.max(error);
             accounting &= result.lp_solves==result.nodes+result.trial_lp_solves
                 && result.node_lp_solves==result.nodes
-                && (policy=="strong" || (result.trial_lp_solves==0 && result.lp_solves==result.nodes));
+                && (policy=="strong" || (result.trial_lp_solves==0 && result.lp_solves==result.nodes))
+                && (policy!="root-neural" || (result.inference_calls==1 && result.feature_calls==1));
             counts[p]+=result.nodes as f64; times[p]+=result.total_ms; solves[p]+=result.lp_solves as f64;
             lp_times[p]+=result.lp_ms; inference_times[p]+=result.inference_ms;
             println!("eval\tinstance_{id:02}_{policy}_nodes\t{}\t{:.6}",result.nodes,result.total_ms);
@@ -412,9 +451,14 @@ pub(super) fn evaluate(a:&Args) -> Result<()> {
     let valid=max_error<=EPS && accounting;
     let summary=json!({"policies":policy_summary,"max_energy_error":max_error,
         "lp_accounting_passed":accounting,"neural_saves_nodes":counts[2]<counts[0],
+        "root_neural_saves_nodes":counts[3]<counts[0],
         "probability_parity":parity,"largest_saving":savings});
     let run=json!({"schema":"branchopt.eval.v1","parameters":a,"mode":"eval",
         "validation_status":if valid{"passed"}else{"failed_exactness_or_accounting"},
+        "settings":{"presolve":false,"threads":1,"oracle_in_search_time":false,
+            "initial_incumbent":"none","root_score_standard_deviation":"population; floor 1e-6",
+            "root_fractionality_weight":3.0,"inference_ms_includes":"feature extraction and network; root normalization included",
+            "total_ms_includes":"LP setup/solve/extraction, branch management, feature/network cost, trace recording"},
         "summary":summary,"instances":rows,"runtime_ms":start.elapsed().as_secs_f64()*1e3});
     fs::write(a.out.join("run.json"),serde_json::to_vec_pretty(&run)?)?;
     println!("eval\tmax_energy_error\t{max_error}\t0");
@@ -447,11 +491,40 @@ mod learned_tests {
                 let bits:Vec<u8>=(0..6).map(|i|((mask>>i)&1)as u8).collect();
                 physical_energy(&g,&bits)
             }).fold(f64::INFINITY,f64::min);
-            let result=search(&g,"neural",Some(&network),false)?;
-            assert!((result.energy-expected).abs()<1e-9);
-            assert_eq!(result.lp_solves,result.nodes);
-            assert_eq!(result.trial_lp_solves,0);
+            for policy in ["neural","root-neural"] {
+                let result=search(&g,policy,Some(&network),false)?;
+                assert!((result.energy-expected).abs()<1e-9);
+                assert_eq!(result.lp_solves,result.nodes);
+                assert_eq!(result.trial_lp_solves,0);
+                if policy=="root-neural" {
+                    assert_eq!(result.feature_calls,1);
+                    assert_eq!(result.inference_calls,1);
+                    let raw=result.root_raw_scores.as_ref().unwrap();
+                    let cached=result.root_scores.as_ref().unwrap();
+                    assert_eq!(raw.len(),g.n);
+                    assert_eq!(cached.len(),g.n);
+                    for row in &result.trace {
+                        if row["status"]!="branched" {continue;}
+                        let mut chosen=usize::MAX; let mut best=f64::NEG_INFINITY;
+                        for index in row["candidates"].as_array().unwrap() {
+                            let i=index.as_u64().unwrap() as usize;
+                            let x=row["x"][i].as_f64().unwrap();
+                            let score=cached[i]+3.0*2.0*x.min(1.0-x);
+                            if score>best+TIE {best=score;chosen=i;}
+                        }
+                        assert_eq!(row["chosen_spin"],json!(chosen));
+                    }
+                }
+            }
         }
+        Ok(())
+    }
+    #[test]
+    fn root_standardization_uses_population_std_and_floor() -> Result<()> {
+        assert_eq!(standardized_root_scores(&[1.0,3.0])?,vec![-1.0,1.0]);
+        assert_eq!(standardized_root_scores(&[7.0,7.0,7.0])?,vec![0.0;3]);
+        let tiny=standardized_root_scores(&[0.0,1e-8])?;
+        assert!((tiny[0]+0.005).abs()<1e-12 && (tiny[1]-0.005).abs()<1e-12);
         Ok(())
     }
 }

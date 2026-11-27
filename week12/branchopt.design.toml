@@ -107,3 +107,16 @@ checks = "Energy error <=1e-6; most-frac/neural LP solves equal explored nodes; 
 "<out>/run.json" = "Measured three-policy results on identical unseen graphs and all validation summaries"
 "<out>/parity.json" = "Six-probe maximum probability and logit differences between JAX and Rust"
 # WEEK12_PART3_END
+
+# WEEK12_PART4_BEGIN
+[benchmark.eval.root_neural]
+policy = """
+Score all n spins at the root. Subtract their mean and divide by max(std,1e-6),
+using the population standard deviation. At each branch maximize this cached
+root score + 3 * 2 min(x_i,1-x_i) over eligible candidate spins.
+"""
+timing = "Record total search wall time, LP time and feature-plus-inference time. Include the single root cache construction in total and inference time; subsequent cached-score arithmetic belongs to tree management."
+audit = "Store feature/inference call counts, raw root logits, standardized cache and branch trace. Require exactly one root feature/network call per instance and no non-Strong trial LPs."
+transfer = "Reuse the unchanged model on 16 graphs n=22,m=52,seed=3026 and 8 graphs n=30,m=72,seed=4026, without retraining. Compare most-frac, strong, neural and root-neural on each graph."
+evidence = "artifacts/eval.png and artifacts/part4_checks.json. Show nodes for both sizes and total/LP/inference wall time on the larger graphs. Keep actual timing and performance outcomes."
+# WEEK12_PART4_END

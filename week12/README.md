@@ -206,3 +206,68 @@ exact unseen searches and plotting. These are development checks; the course's
 n=22 experiments are executed on the user's machine by the reproduction script.
 The independent static review and its dispositions are in DEEPSEEK_REVIEW.md.
 <!-- WEEK12_PART3_END -->
+
+<!-- WEEK12_PART4_BEGIN -->
+## Part 4: Inference overhead and larger graphs
+
+After Part 3, run `bash ./week12_part4.sh` from the same `week12/` directory.
+The saved `run_part4.sh` is a self-contained reproduction of this stage.
+The script reuses `artifacts/model.json` without retraining, fingerprints its
+bytes before and after both evaluations, checks the exact-search implementation,
+runs all four policies at both graph sizes, plots actual evidence and creates
+`RESULTS.md` from local JSON files. Original Part 3 evidence is copied to
+`artifacts/part3_eval_snapshot/` before the 22-spin evaluation is refreshed.
+Existing stage files and overwritten evidence are backed up under artifacts/.
+
+Root-neural extracts all n spin features once from the root LP, scores them
+with the same trained MLP, and standardizes the root logits with their population
+mean/std (std floor 1e-6). At each later branch it chooses the candidate with
+the largest cached root score + 3*2*min(x_i,1-x_i). The cache is local to one
+search invocation and never crosses graphs or policies. No deeper-node features
+or forward passes occur. Root scores are computed even for an integral root.
+Neither learned policy changes any bounds, incumbent rules or child partitions.
+All non-Strong policies have zero trial solves and LP solves equal visited nodes.
+
+Timing is collected inside each search. Total time includes all LP construction,
+solve/extraction, graph-feature and network work, branch management and trace
+recording. LP time includes Strong trial solves. Feature-plus-inference time
+includes all per-node neural work, or the one root feature/forward/normalization
+step. Later cached-score arithmetic belongs to tree management. Oracle MILPs,
+model loading, six-probe verification and final file writing are outside search
+timers. These are actual single-run wall-clock measurements; no timing guarantee
+or statistical claim is inferred from one laptop run.
+
+Reproduce the evaluation and chart:
+
+```bash
+cargo test --release --locked -- --test-threads=1
+cargo install --path . --force --locked
+branchopt --mode eval --spins 22 --edges 52 --count 16 --seed 3026 --model artifacts/model.json --out artifacts/eval_test
+branchopt --mode eval --spins 30 --edges 72 --count 8 --seed 4026 --model artifacts/model.json --out artifacts/eval_transfer
+uv run --no-project --python 3.12 --with matplotlib==3.10.7 python plot_eval.py
+python3 summarize_results.py
+```
+
+For the fingerprint, complete environment capture and strict course-setting
+checks, use `bash run_part4.sh`. The script saves actual runs and the figure
+before deciding whether performance criteria pass. It validates every energy
+against the separate HiGHS optimum, LP accounting, six probability probes,
+one root scoring call, every cached-score branch choice, disjoint unseen test
+graphs, unchanged model bytes, and consistent timer components. Both neural
+rules must use fewer mean nodes than most-frac at both sizes. To give the
+learning sheet's qualitative "many times faster than Strong" requirement a
+testable threshold, this script requires at least 2x while printing the full
+measured ratios. A failed performance criterion keeps all actual evidence.
+
+The five small Rust tests cover enumeration-based exactness, feature formulas,
+the three-node workshop, population root normalization (including constant and
+tiny-variance logits), and root-cache use through actual search traces. A small
+development-only two-size integration checks JSON export, plotting and the
+independent cache audit; formal 22/30-spin experiments run on the user's PC.
+
+Deliverable figures are `artifacts/gap.png`, `artifacts/bnb.png`,
+`artifacts/neural_bnb.png` and `artifacts/eval.png`. Keep them with all raw runs,
+pred files and model.json locally. `RESULTS.md` contains measured tables,
+environment details and notes for explaining the four figures. After the final
+local commit, publish the source commits with `git push` from the course repo.
+<!-- WEEK12_PART4_END -->
