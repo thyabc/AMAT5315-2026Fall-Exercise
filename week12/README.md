@@ -46,7 +46,7 @@ Actual results and timings must come from the local run.
 artifacts/ and target/ are ignored by Git. The bootstrap commits only its
 explicit source-file list after all Part 1 checks and plotting succeed, leaving
 any pre-existing staged changes untouched by that commit. It does not push.
-Parts 2-4 are added in the next stages.
+All four parts are complete. See [RESULTS.md](RESULTS.md) for measured results.
 
 ## Environment recorded by this local run
 
@@ -122,7 +122,7 @@ supports --mode gap. See DEEPSEEK_REVIEW.md for the independent review scope.
 <!-- WEEK12_PART3_BEGIN -->
 ## Part 3: Imitation learning for branching
 
-Run `bash ./week12_part3.sh` from the existing `week12/` directory after Part 2.
+Run `bash ./run_part3.sh` from the existing `week12/` directory after Part 2.
 The saved `run_part3.sh` is the same self-contained reproduction script.
 The script runs the four small Rust checks, installs the updated executable,
 exports Strong labels, trains JAX on the CPU, runs the unseen evaluation, plots
@@ -210,7 +210,7 @@ The independent static review and its dispositions are in DEEPSEEK_REVIEW.md.
 <!-- WEEK12_PART4_BEGIN -->
 ## Part 4: Inference overhead and larger graphs
 
-After Part 3, run `bash ./week12_part4.sh` from the same `week12/` directory.
+After Part 3, run `bash ./run_part4.sh` from the same `week12/` directory.
 The saved `run_part4.sh` is a self-contained reproduction of this stage.
 The script reuses `artifacts/model.json` without retraining, fingerprints its
 bytes before and after both evaluations, checks the exact-search implementation,

@@ -37,7 +37,7 @@ confirmation of measured benchmark values.
    guarantees uniqueness; construction rejects an excessive initial edge set
    and the fill loop stops at exactly m. Gap is MILP energy minus LP energy.
 
-## What remains to be validated on the user's computer
+## Pending checks at the Part 1 handoff (historical)
 
 - Both pred examples, in particular the 100-spin reference energy -138.
 - All Part 1 physical-energy and reference-statistic assertions.
