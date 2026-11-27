@@ -44,3 +44,26 @@ Save each LP bound, integer optimum, gap, fractional spin count
 [writes]
 stdout = "tab-separated table with header: mode, metric, value, runtime_ms"
 "<out>/run.json" = "schema, mode, seed, parameters, summary and raw evidence"
+
+# WEEK12_PART2_BEGIN
+[args.bnb]
+policy = "branching rule: most-frac | strong | neural | root-neural"
+[benchmark.bnb]
+search = """
+Start a depth-first search with no incumbent. Prune infeasible LPs and bounds
+>= incumbent - 1e-6. Branch on a free spin with 1e-6 < x_i < 1 - 1e-6.
+Visit the child nearer its LP value first (at 0.5, visit x_i=1 first).
+"""
+policies = """
+Most-frac picks the spin closest to 0.5. Strong probes both child LPs for
+every candidate and maximizes max(d0,1e-6) * max(d1,1e-6). A gain is the
+child bound minus the parent bound, or 1e6 if pruned or infeasible. Count
+trial LPs and leave the incumbent unchanged. Break ties by lowest spin index.
+"""
+evidence = """
+Trace Branch-and-Bound on the opening workshop problem, splitting on x2
+and visiting x2 <= 2 first. Save each branch, status, LP bound and variable
+values. For each random spin glass record energy, error against HiGHS,
+nodes, LP solves and elapsed search time.
+"""
+# WEEK12_PART2_END

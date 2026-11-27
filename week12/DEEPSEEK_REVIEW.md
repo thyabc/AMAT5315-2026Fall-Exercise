@@ -44,3 +44,41 @@ confirmation of measured benchmark values.
 - Local measured times and the resulting gap.png.
 - Parts 2-4 and all learning/generalization claims, which are not implemented
   or validated by this Part 1 delivery.
+
+<!-- WEEK12_PART2_BEGIN -->
+## Part 2 independent review (2026-11-27)
+
+An actual follow-up request was submitted to the same DeepSeek conversation.
+The submitted excerpts covered continuous node LPs, the DFS search loop,
+incumbent updates, Strong Branching trial isolation, gain direction, child
+ordering, solve counts, timing scope and the workshop trace contract.
+DeepSeek performed static review only and reported no definite error in the
+shown minimization/pruning, incumbent or trial-accounting logic.
+
+Review dispositions by the primary assistant:
+
+1. The 1e-6 pruning/integrality tolerance is the sheet's requirement. The
+   provided generator uses integer couplings and fields; no claim of certified
+   exactness for arbitrary real input at differences below that tolerance is made.
+2. The gain sentinel 1e6 is explicitly required by the sheet and changes only
+   variable selection. Trial LPs use cloned bound vectors and independent models;
+   an immutable incumbent snapshot is used and trials cannot update it.
+3. Integral solutions are rounded only within tolerance and checked by direct
+   Hamiltonian recomputation; the final search is independently compared with
+   HiGHS. Non-optimal/non-infeasible LP statuses abort the run and cannot be
+   reported as a completed successful benchmark.
+4. Counts include infeasible visited/trial nodes. No trial solve is cached or
+   reused as a visited-node LP. The program checks the total-count identity.
+5. DeepSeek's final prose reversed the required workshop PUSH order in its
+   last point. The delivered code correctly pushes x2>=3 FIRST and x2<=2 LAST;
+   LIFO therefore VISITS x2<=2 first. This was checked by the actual three-node
+   unit test and CLI integration trace; that erroneous prose was not adopted.
+
+Validation performed before delivery: Rust compilation passed; both policies
+matched exhaustive enumeration on eight small n=3/4/6/8 graphs; the actual
+workshop trace visited three nodes; a separate 2-instance, 6-spin CLI/plot
+integration check passed with zero energy errors and correct solve accounting.
+Those are development checks, not the assignment's formal benchmark results.
+The two official 48-instance runs and their reported times remain to be
+computed on the user's own computer by run_part2.sh.
+<!-- WEEK12_PART2_END -->

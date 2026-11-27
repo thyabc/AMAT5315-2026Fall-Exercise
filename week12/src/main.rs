@@ -1,3 +1,4 @@
+mod bnb;
 use highs::{HighsModelStatus, Model, RowProblem, Sense};
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -150,25 +151,26 @@ fn metric(name: &str, value: impl std::fmt::Display, ms: f64) {
 }
 
 #[derive(Serialize)]
-struct Args { mode: String, spins: usize, edges: usize, count: usize, seed: u64, out: PathBuf }
+struct Args { mode: String, policy: String, spins: usize, edges: usize, count: usize, seed: u64, out: PathBuf }
 fn arguments() -> Result<Args> {
-    let mut a = Args { mode: "gap".into(), spins: 22, edges: 52, count: 16,
+    let mut a = Args { mode: "gap".into(), policy: "most-frac".into(), spins: 22, edges: 52, count: 16,
                        seed: 2026, out: "artifacts/gap".into() };
     let mut it = env::args().skip(1);
     while let Some(k) = it.next() {
         if k == "--help" {
-            println!("branchopt --mode gap --spins 22 --edges 52 --count 16 --seed 2026 --out artifacts/gap");
+            println!("branchopt --mode gap|bnb --policy most-frac|strong --spins 22 --edges 52 --count 48 --seed 2026 --out artifacts/bnb_most");
             std::process::exit(0);
         }
         let v = it.next().ok_or_else(|| fail(format!("missing value for {k}")))?;
         match k.as_str() {
-            "--mode" => a.mode = v, "--spins" => a.spins = v.parse()?,
+            "--mode" => a.mode = v, "--policy" => a.policy = v, "--spins" => a.spins = v.parse()?,
             "--edges" => a.edges = v.parse()?, "--count" => a.count = v.parse()?,
             "--seed" => a.seed = v.parse()?, "--out" => a.out = v.into(),
             _ => return Err(fail(format!("unknown option {k}"))),
         }
     }
-    check(a.mode == "gap", "this Part 1 version supports --mode gap only")?;
+    check(a.mode == "gap" || a.mode == "bnb", "supported modes: gap | bnb")?;
+    check(a.policy == "most-frac" || a.policy == "strong", "supported policies: most-frac | strong")?;
     check(a.spins >= 3 && a.spins <= 10000 && a.count > 0, "invalid spins or count")?;
     check(a.edges >= a.spins && a.edges <= a.spins * (a.spins - 1) / 2,
           "edge count must be between n and n*(n-1)/2")?;
@@ -177,6 +179,7 @@ fn arguments() -> Result<Args> {
 
 fn main() -> Result<()> {
     let a = arguments()?;
+    if a.mode == "bnb" { return bnb::run(&a); }
     let started = Instant::now();
     fs::create_dir_all(&a.out)?;
     let square = Graph { n: 4, h: vec![0.0; 4], edges: vec![

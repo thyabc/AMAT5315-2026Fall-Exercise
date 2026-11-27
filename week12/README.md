@@ -72,3 +72,49 @@ git version 2.53.0
 pred 0.6.0
 uv 0.12.21 (x86_64-unknown-linux-gnu)
 ```
+
+<!-- WEEK12_PART2_BEGIN -->
+## Part 2: Exact Branch-and-Bound
+
+`src/bnb.rs` builds a fresh continuous HiGHS LP for each visited box and each
+Strong Branching trial. The search begins with no incumbent, visits the nearer
+child first (1 first on exactly 0.5), and prunes using the LP lower bound.
+Integer incumbents are recomputed from the original Hamiltonian. Only fractional
+free spin variables may be split, into the exact partition x_i=0 / x_i=1.
+
+Most-frac minimizes distance from 0.5. Strong Branching maximizes the product of
+floored child gains. A bound-pruned or infeasible child has gain 1e6. Candidate
+indices are traversed in increasing order; ties within 1e-12 numerical tolerance
+(relative to max(1, abs(score)) for strong) retain the earlier index.
+
+Trials use cloned box vectors and independent models. They never update the
+incumbent, modify the real stack, or cache solutions for later child visits.
+Actual LP solve calls = visited nodes + trial solve calls. The oracle is outside
+the search timer and is not an input to search. Total time includes recording
+overhead; LP time includes setup, solve and extraction for visited and trial LPs.
+
+The workshop trace runs a real maximum-revenue LP at each visited box. It
+requires three visited nodes with LP objectives 83/3, 27 and 26.75 and a final
+bound prune. It does not replace the trace with hardcoded output.
+
+Run from week12/:
+
+```bash
+cargo test --release --locked -- --test-threads=1
+cargo install --path . --force --locked
+branchopt --mode bnb --spins 22 --edges 52 --count 48 --policy most-frac --seed 2026 --out artifacts/bnb_most
+branchopt --mode bnb --spins 22 --edges 52 --count 48 --policy strong --seed 2026 --out artifacts/bnb_strong
+uv run --no-project --python 3.12 --with matplotlib==3.10.7 python plot_bnb.py
+```
+
+Raw runs, full traces and measured timing are in artifacts/bnb_most/ and
+artifacts/bnb_strong/. The figure artifacts/bnb.png independently sorts all
+four curves. Input equality, exact energy and solve accounting are validated.
+Node-count and timing reference values are not substituted for measurements.
+The two meaningful unit tests compare both policies with exhaustive enumeration
+on eight small mixed-sign/field graphs and verify the workshop's actual pruning.
+The assignment's two 48-instance runs are performed on the user's computer.
+
+Part 1 gap data and gap.png remain available. The upgraded executable still
+supports --mode gap. See DEEPSEEK_REVIEW.md for the independent review scope.
+<!-- WEEK12_PART2_END -->
