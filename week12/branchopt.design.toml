@@ -1,0 +1,46 @@
+usage = "branchopt --mode gap --spins 22 --edges 52 --count 16 --seed 2026 --out artifacts/gap"
+description = "Solve spin-glass integer programs and compare branching rules"
+[args]
+mode = "study mode: gap | bnb | eval"
+spins = "number of spins n of each random Spin Glass instance"
+edges = "number of undirected bonds m of each random Spin Glass instance"
+count = "number of random instances, numbered 0 to count - 1"
+seed = "random seed, recorded with the run"
+out = "directory for this run's raw evidence"
+[benchmark.gap]
+highs = { presolve = false, threads = 1 }
+model = """
+min sum_e J_e (1 - 2 z_e) + sum_i h_i (1 - 2 x_i), x_i binary, z_e in [0,1].
+For each bond e=(u,v): z_e <= x_u+x_v, z_e <= 2-x_u-x_v,
+z_e >= x_u-x_v, z_e >= x_v-x_u.
+"""
+square = """
+Cycle 0-1-2-3-0, J=(+1,+1,+1,-1), h=0. Report LP and integer spins and
+energies, and the energy after nearest rounding (x_i >= 0.5 gives 1).
+"""
+workshop = """
+Maximize 5x1 + 6x2 with x1 + x2 <= 5, 4x1 + 7x2 <= 28, and x1, x2 >= 0.
+Report the LP relaxation optimum, whether nearest rounding is feasible,
+and the exact integer optimum.
+"""
+generator = """
+SplitMix64 (arithmetic mod 2^64):
+  next(): state += 0x9E3779B97F4A7C15; z = state
+          z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9
+          z = (z ^ (z >> 27)) * 0x94D049BB133111EB; return z ^ (z >> 31)
+  integer in {0..k-1}: next() mod k
+Instance id starts from state = first next() of a generator whose state is
+seed XOR (id * 0xD1B54A32D192ED03). Build the edge set E as pairs (u < v):
+first, for i = 0..n-1, while deg(i) < min(2, n-1), draw j in {0..n-1} and add
+(min(i,j), max(i,j)) if j != i and not already in E. Next, while |E| < m, draw
+i then j in {0..n-1} and add (min(i,j), max(i,j)) if i != j and not in E. Sort
+E lexicographically by (u, v). For each sorted bond draw J_e = +1 if
+(next() & 1) == 0 else -1. For each spin i = 0..n-1 draw h_i = (next() mod 3) - 1.
+"""
+evidence = """
+Save each LP bound, integer optimum, gap, fractional spin count
+(1e-6 < x_i < 1 - 1e-6), nearest-rounded energy and its excess.
+"""
+[writes]
+stdout = "tab-separated table with header: mode, metric, value, runtime_ms"
+"<out>/run.json" = "schema, mode, seed, parameters, summary and raw evidence"
