@@ -4,7 +4,7 @@ use super::*;
 const EPS: f64 = 1e-6;
 const TIE: f64 = 1e-12;
 
-struct Lp { energy: f64, x: Vec<f64> }
+struct Lp { energy: f64, x: Vec<f64>, z: Vec<f64>, duals: Vec<f64> }
 
 fn solve_lp(g: &Graph, fixed: &[i8]) -> Result<Option<Lp>> {
     let mut pb = RowProblem::new();
@@ -27,12 +27,52 @@ fn solve_lp(g: &Graph, fixed: &[i8]) -> Result<Option<Lp>> {
     if solved.status() == HighsModelStatus::Infeasible { return Ok(None); }
     check(solved.status() == HighsModelStatus::Optimal,
           &format!("node LP has unexpected status {:?}", solved.status()))?;
-    let v = solved.get_solution().columns().to_vec();
+    let solution=solved.get_solution();
+    let v = solution.columns().to_vec();
+    let duals = solution.dual_rows().to_vec();
     let energy = g.h.iter().sum::<f64>() + g.edges.iter().map(|e|e.j).sum::<f64>()
         - 2.0*g.h.iter().zip(&v[..g.n]).map(|(h,x)|h*x).sum::<f64>()
         - 2.0*g.edges.iter().zip(&v[g.n..]).map(|(e,z)|e.j*z).sum::<f64>();
     check(energy.is_finite(), "node LP returned a non-finite energy")?;
-    Ok(Some(Lp { energy, x: v[..g.n].to_vec() }))
+    Ok(Some(Lp { energy, x: v[..g.n].to_vec(), z: v[g.n..].to_vec(), duals }))
+}
+
+#[derive(Serialize)]
+struct LabelNode {
+    node:usize, candidates:Vec<usize>, features:Vec<Vec<f64>>,
+    gains:Vec<[f64;2]>, scores:Vec<f64>, pruned_children:Vec<u8>,
+    fixed:Vec<i8>, lp_x:Vec<f64>, lp_z:Vec<f64>, row_duals:Vec<f64>,
+    lp_bound:f64, incumbent:Option<f64>, chosen_spin:usize,
+}
+
+fn feature_rows(g:&Graph,lp:&Lp,fixed:&[i8],incumbent:f64,candidates:&[usize]) -> Vec<Vec<f64>> {
+    let x:Vec<f64>=lp.x.iter().map(|v|v.clamp(0.0,1.0)).collect();
+    let spins:Vec<f64>=x.iter().map(|v|1.0-2.0*v).collect();
+    let mut incident=vec![Vec::new();g.n];
+    for (k,e) in g.edges.iter().enumerate() {
+        incident[e.u].push((k,e.v)); incident[e.v].push((k,e.u));
+    }
+    let dmax=incident.iter().map(Vec::len).max().unwrap_or(0).max(1) as f64;
+    let dual_scale=lp.duals.iter().map(|v|v.abs()).fold(1e-9_f64,f64::max);
+    let gap_ratio=if incumbent.is_finite() {
+        ((incumbent-lp.energy)/incumbent.abs().max(1.0)).clamp(0.0,2.0)
+    } else {1.0};
+    candidates.iter().map(|&i| {
+        let degree=incident[i].len() as f64;
+        let denom=degree.max(1.0);
+        let (mut bias,mut effective,mut dual,mut gap,mut neighbor_frac)=(0.0, g.h[i], 0.0, 0.0, 0.0);
+        for &(k,j) in &incident[i] {
+            let e=&g.edges[k];
+            bias+=if e.j>0.0 {1.0} else if e.j<0.0 {-1.0} else {0.0};
+            effective+=e.j*spins[j];
+            dual+=lp.duals[4*k..4*k+4].iter().map(|v|v.abs()).sum::<f64>()/dual_scale;
+            gap+=(lp.z[k]-0.5*(1.0-spins[i]*spins[j])).abs();
+            if fixed[j]<0 {neighbor_frac+=2.0*x[j].min(1.0-x[j]);}
+        }
+        effective/=degree+1.0;
+        vec![x[i],2.0*x[i].min(1.0-x[i]),g.h[i],g.h[i].abs(),degree/dmax,bias/denom,
+             effective,effective.abs(),dual/denom,gap/denom,neighbor_frac/denom,gap_ratio]
+    }).collect()
 }
 
 #[derive(Clone)]
@@ -42,11 +82,13 @@ struct Node { fixed: Vec<i8>, parent: Option<usize>, depth: usize, branch: Optio
 struct SearchResult {
     energy: f64, bits: Vec<u8>, nodes: usize, lp_solves: usize,
     node_lp_solves: usize, trial_lp_solves: usize,
-    total_ms: f64, lp_ms: f64, first_splits: Vec<usize>, trace: Vec<Value>,
+    total_ms: f64, lp_ms: f64, inference_ms: f64, first_splits: Vec<usize>, trace: Vec<Value>,
+    #[serde(skip_serializing)] labels: Vec<LabelNode>,
 }
 
-fn search(g: &Graph, policy: &str) -> Result<SearchResult> {
-    check(policy == "most-frac" || policy == "strong", "unsupported B&B policy")?;
+fn search(g: &Graph, policy: &str, model: Option<&nn::Network>, export_labels: bool) -> Result<SearchResult> {
+    check(["most-frac","strong","neural"].contains(&policy), "unsupported B&B policy")?;
+    check(policy!="neural" || model.is_some(), "neural policy requires a model")?;
     let start = Instant::now();
     let mut stack = vec![Node { fixed: vec![-1;g.n], parent: None, depth: 0, branch: None }];
     let mut incumbent = f64::INFINITY;
@@ -55,6 +97,8 @@ fn search(g: &Graph, policy: &str) -> Result<SearchResult> {
     let mut lp_ms = 0.0;
     let mut trace = Vec::new();
     let mut first_splits = Vec::new();
+    let mut labels=Vec::new();
+    let mut inference_ms=0.0;
     while let Some(node) = stack.pop() {
         nodes += 1;
         let lp_start = Instant::now();
@@ -90,6 +134,13 @@ fn search(g: &Graph, policy: &str) -> Result<SearchResult> {
             trace.push(audit);
             continue;
         }
+        let record_label=export_labels && policy=="strong" && candidates.len()>=2 && labels.len()<80;
+        let mut features=Vec::new();
+        if record_label || policy=="neural" {
+            let t=Instant::now();
+            features=feature_rows(g,&lp,&node.fixed,incumbent,&candidates);
+            inference_ms+=t.elapsed().as_secs_f64()*1e3;
+        }
         let mut chosen = candidates[0];
         let mut strong_audit = Vec::new();
         if policy == "most-frac" {
@@ -98,7 +149,7 @@ fn search(g: &Graph, policy: &str) -> Result<SearchResult> {
                 let distance = (lp.x[i]-0.5).abs();
                 if distance < best_distance-TIE { chosen=i; best_distance=distance; }
             }
-        } else {
+        } else if policy=="strong" {
             let mut best_score: f64 = -1.0;
             // This immutable snapshot is used for EVERY trial at this node.
             let incumbent_at_node = incumbent;
@@ -128,6 +179,26 @@ fn search(g: &Graph, policy: &str) -> Result<SearchResult> {
                 }
             }
         }
+        if policy=="neural" {
+            let t=Instant::now();
+            let scores=model.unwrap().scores(&features)?;
+            let mut best=f64::NEG_INFINITY;
+            for (k,&score) in scores.iter().enumerate() {
+                if score>best+TIE {best=score;chosen=candidates[k];}
+            }
+            inference_ms+=t.elapsed().as_secs_f64()*1e3;
+        }
+        if record_label {
+            let gains:Vec<[f64;2]>=strong_audit.iter().map(|v|[
+                v["gains"][0].as_f64().unwrap(),v["gains"][1].as_f64().unwrap()]).collect();
+            let scores=strong_audit.iter().map(|v|v["score"].as_f64().unwrap()).collect();
+            let pruned_children=strong_audit.iter().map(|v|v["eliminated"].as_array().unwrap()
+                .iter().filter(|b|b.as_bool()==Some(true)).count() as u8).collect();
+            labels.push(LabelNode{node:nodes,candidates:candidates.clone(),features,gains,scores,
+                pruned_children,fixed:node.fixed.clone(),lp_x:lp.x.clone(),lp_z:lp.z.clone(),
+                row_duals:lp.duals.clone(),lp_bound:lp.energy,
+                incumbent:if incumbent.is_finite(){Some(incumbent)}else{None},chosen_spin:chosen});
+        }
         if first_splits.len()<2 { first_splits.push(chosen); }
         audit["status"]=json!("branched");
         audit["chosen_spin"]=json!(chosen);
@@ -146,7 +217,7 @@ fn search(g: &Graph, policy: &str) -> Result<SearchResult> {
     let total_ms=start.elapsed().as_secs_f64()*1e3;
     check(incumbent.is_finite() && best_bits.len()==g.n,"search finished without a feasible incumbent")?;
     Ok(SearchResult { energy:incumbent,bits:best_bits,nodes,lp_solves:nodes+trials,
-        node_lp_solves:nodes,trial_lp_solves:trials,total_ms,lp_ms,first_splits,trace })
+        node_lp_solves:nodes,trial_lp_solves:trials,total_ms,lp_ms,inference_ms,first_splits,trace,labels })
 }
 
 fn workshop_trace() -> Result<Value> {
@@ -197,6 +268,7 @@ struct BnbRecord { id:usize,instance_seed:u64,graph:Graph,oracle:Solve,search:Se
 pub(super) fn run(a: &Args) -> Result<()> {
     fs::create_dir_all(&a.out)?;
     let start=Instant::now();
+    let model=a.model.as_ref().map(nn::Network::load).transpose()?;
     let workshop=workshop_trace()?;
     println!("mode\tmetric\tvalue\truntime_ms");
     for (i,row) in workshop["nodes"].as_array().unwrap().iter().enumerate() {
@@ -207,7 +279,7 @@ pub(super) fn run(a: &Args) -> Result<()> {
         let (instance_seed,graph)=generate(a.spins,a.edges,a.seed,id)?;
         // The oracle is outside the timed search and is NEVER supplied to it.
         let oracle=solve_spin(&graph,true)?;
-        let result=search(&graph,&a.policy)?;
+        let result=search(&graph,&a.policy,model.as_ref(),a.export_labels)?;
         let error=(result.energy-oracle.energy).abs();
         println!("bnb\tinstance_{id:02}_nodes\t{}\t{:.6}",result.nodes,result.total_ms);
         println!("bnb\tinstance_{id:02}_lp_solves\t{}\t{:.6}",result.lp_solves,result.total_ms);
@@ -238,6 +310,24 @@ pub(super) fn run(a: &Args) -> Result<()> {
     for (name,value) in summary.as_object().unwrap() {
         println!("bnb\t{name}\t{value}\t{elapsed:.6}");
     }
+    if a.export_labels {
+        let mut dataset_nodes=Vec::new();
+        for record in &records {
+            for label in &record.search.labels {
+                let mut v=serde_json::to_value(label)?;
+                v["instance_id"]=json!(record.id);
+                v["split"]=json!(if record.id<36 {"train"} else {"validation"});
+                dataset_nodes.push(v);
+            }
+        }
+        let graphs:Vec<Value>=records.iter().map(|r|json!({"id":r.id,"instance_seed":r.instance_seed,"graph":r.graph})).collect();
+        let dataset=json!({"schema":"branchopt.labels.v1","parameters":a,
+            "feature_names":nn::FEATURE_NAMES,"instances":graphs,"nodes":dataset_nodes,
+            "max_nodes_per_instance":80,"minimum_candidates":2,
+            "source_validation_status":if valid{"passed"}else{"failed"}});
+        fs::write(a.out.join("dataset.json"),serde_json::to_vec_pretty(&dataset)?)?;
+        eprintln!("Saved {}",a.out.join("dataset.json").display());
+    }
     check(valid,"B&B validation failed; inspect the saved raw run.json")?;
     eprintln!("Saved {}",a.out.join("run.json").display());
     Ok(())
@@ -256,7 +346,7 @@ mod tests {
                     physical_energy(&g,&bits)
                 }).fold(f64::INFINITY,f64::min);
                 for policy in ["most-frac","strong"] {
-                    let result=search(&g,policy)?;
+                    let result=search(&g,policy,None,false)?;
                     assert!((result.energy-expected).abs()<1e-9);
                     assert_eq!(result.lp_solves,result.nodes+result.trial_lp_solves);
                     assert_eq!(result.node_lp_solves,result.nodes);
@@ -271,6 +361,97 @@ mod tests {
         let trace=workshop_trace()?;
         assert_eq!(trace["node_count"],json!(3));
         assert!((trace["nodes"][2]["lp_value"].as_f64().unwrap()-26.75).abs()<1e-9);
+        Ok(())
+    }
+}
+
+pub(super) fn evaluate(a:&Args) -> Result<()> {
+    fs::create_dir_all(&a.out)?;
+    let network=nn::Network::load(a.model.as_ref().ok_or_else(||fail("eval requires a model"))?)?;
+    let parity=network.verify_probes()?;
+    fs::write(a.out.join("parity.json"),serde_json::to_vec_pretty(&parity)?)?;
+    check(parity.max_probability_error<1e-4,"JAX/Rust probability parity failed")?;
+    let policies=["most-frac","strong","neural"];
+    let start=Instant::now();
+    let mut rows=Vec::new();
+    let mut counts=vec![0.0;3]; let mut times=vec![0.0;3]; let mut solves=vec![0.0;3];
+    let mut lp_times=vec![0.0;3]; let mut inference_times=vec![0.0;3];
+    let mut max_error=0.0_f64; let mut accounting=true;
+    for id in 0..a.count {
+        let (instance_seed,graph)=generate(a.spins,a.edges,a.seed,id)?;
+        let oracle=solve_spin(&graph,true)?;
+        let mut searches=serde_json::Map::new(); let mut errors=serde_json::Map::new();
+        for (p,&policy) in policies.iter().enumerate() {
+            let result=search(&graph,policy,Some(&network),false)?;
+            let error=(result.energy-oracle.energy).abs();
+            max_error=max_error.max(error);
+            accounting &= result.lp_solves==result.nodes+result.trial_lp_solves
+                && result.node_lp_solves==result.nodes
+                && (policy=="strong" || (result.trial_lp_solves==0 && result.lp_solves==result.nodes));
+            counts[p]+=result.nodes as f64; times[p]+=result.total_ms; solves[p]+=result.lp_solves as f64;
+            lp_times[p]+=result.lp_ms; inference_times[p]+=result.inference_ms;
+            println!("eval\tinstance_{id:02}_{policy}_nodes\t{}\t{:.6}",result.nodes,result.total_ms);
+            errors.insert(policy.into(),json!(error));
+            searches.insert(policy.into(),serde_json::to_value(&result)?);
+        }
+        rows.push(json!({"id":id,"instance_seed":instance_seed,"graph":graph,"oracle":oracle,
+            "searches":searches,"energy_errors":errors}));
+    }
+    let mut policy_summary=serde_json::Map::new();
+    for (p,&policy) in policies.iter().enumerate() {
+        policy_summary.insert(policy.into(),json!({"mean_nodes":counts[p]/a.count as f64,
+            "mean_lp_solves":solves[p]/a.count as f64,"mean_total_ms":times[p]/a.count as f64,
+            "mean_lp_ms":lp_times[p]/a.count as f64,"mean_inference_ms":inference_times[p]/a.count as f64,
+            "lp_solves_equal_nodes":rows.iter().all(|r|r["searches"][policy]["lp_solves"]==r["searches"][policy]["nodes"])}));
+    }
+    let largest=rows.iter().max_by_key(|r|
+        r["searches"]["most-frac"]["nodes"].as_i64().unwrap()
+        - r["searches"]["neural"]["nodes"].as_i64().unwrap()).unwrap();
+    let savings=json!({"instance_id":largest["id"],"ground_energy":largest["oracle"]["energy"],
+        "most-frac":largest["searches"]["most-frac"],"neural":largest["searches"]["neural"]});
+    let valid=max_error<=EPS && accounting;
+    let summary=json!({"policies":policy_summary,"max_energy_error":max_error,
+        "lp_accounting_passed":accounting,"neural_saves_nodes":counts[2]<counts[0],
+        "probability_parity":parity,"largest_saving":savings});
+    let run=json!({"schema":"branchopt.eval.v1","parameters":a,"mode":"eval",
+        "validation_status":if valid{"passed"}else{"failed_exactness_or_accounting"},
+        "summary":summary,"instances":rows,"runtime_ms":start.elapsed().as_secs_f64()*1e3});
+    fs::write(a.out.join("run.json"),serde_json::to_vec_pretty(&run)?)?;
+    println!("eval\tmax_energy_error\t{max_error}\t0");
+    println!("eval\tlp_accounting_passed\t{accounting}\t0");
+    println!("eval\tmax_probe_probability_error\t{}\t0",summary["probability_parity"]["max_probability_error"]);
+    eprintln!("Saved {}",a.out.join("run.json").display());
+    check(valid,"evaluation failed; inspect saved raw evidence")
+}
+
+#[cfg(test)]
+mod learned_tests {
+    use super::*;
+    #[test]
+    fn candidate_features_follow_the_twelve_definitions() {
+        let g=Graph{n:3,h:vec![0.0;3],edges:vec![Edge{u:0,v:1,j:1.0},Edge{u:0,v:2,j:1.0},Edge{u:1,v:2,j:1.0}]};
+        let lp=Lp{energy:-3.0,x:vec![0.5;3],z:vec![1.0;3],duals:vec![1.0;12]};
+        let rows=feature_rows(&g,&lp,&[-1,-1,-1],f64::INFINITY,&[0]);
+        let expected=[0.5,1.0,0.0,0.0,1.0,1.0,0.0,0.0,4.0,0.5,1.0,1.0];
+        for (a,b) in rows[0].iter().zip(expected){assert!((a-b).abs()<1e-12);}
+        let row=feature_rows(&g,&lp,&[-1,0,-1],-2.0,&[0]);
+        assert!((row[0][10]-0.5).abs()<1e-12);
+        assert!((row[0][11]-0.5).abs()<1e-12);
+    }
+    #[test]
+    fn adversarial_network_changes_order_without_changing_optimum() -> Result<()> {
+        let network=nn::adversarial_fixture();
+        for id in 0..4 {
+            let (_,g)=generate(6,12,17041,id)?;
+            let expected=(0..64).map(|mask| {
+                let bits:Vec<u8>=(0..6).map(|i|((mask>>i)&1)as u8).collect();
+                physical_energy(&g,&bits)
+            }).fold(f64::INFINITY,f64::min);
+            let result=search(&g,"neural",Some(&network),false)?;
+            assert!((result.energy-expected).abs()<1e-9);
+            assert_eq!(result.lp_solves,result.nodes);
+            assert_eq!(result.trial_lp_solves,0);
+        }
         Ok(())
     }
 }

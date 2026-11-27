@@ -67,3 +67,43 @@ values. For each random spin glass record energy, error against HiGHS,
 nodes, LP solves and elapsed search time.
 """
 # WEEK12_PART2_END
+
+# WEEK12_PART3_BEGIN
+[args.labels]
+export_labels = "Optional --export-labels flag; default false; only permitted for bnb + strong. Record at least two candidates and at most 80 branch nodes per instance."
+
+[args.eval]
+model = "--model path/to/model.json; required for neural branching and eval"
+
+[benchmark.bnb.features]
+source = "Parent graph, parent LP x/z/row-duals, box bounds, current feasible incumbent. Extract before Strong trial solves."
+conventions = "x is clamped to [0,1]; s=1-2x; dmax=max(1,max degree); ddual=max(1e-9,max absolute row dual); an empty incident-edge mean is zero."
+ordered = [
+  "x_val = x_i",
+  "frac_dist = 2*min(x_i,1-x_i)",
+  "field_h = h_i",
+  "abs_field_h = abs(h_i)",
+  "deg_norm = degree(i)/dmax",
+  "bond_bias = sum_incident sign(J_e)/max(1,degree(i))",
+  "eff_field = (h_i + sum_incident J_ij*s_j)/(degree(i)+1)",
+  "abs_eff_field = abs(eff_field)",
+  "mean_bond_dual = mean_incident(sum_four_rows abs(dual_e))/ddual",
+  "mean_bond_gap = mean_incident abs(z_e - 0.5*(1-s_i*s_j))",
+  "mean_nbr_frac = mean_neighbors(0 if fixed else 2*min(x_j,1-x_j))",
+  "gap_ratio = clamp((incumbent-parent_bound)/max(abs(incumbent),1),0,2), or 1 without incumbent",
+]
+neural = "Normalize with exported train-only mean/std, apply shared 12-48(tanh)-1 f64 MLP to candidates, choose largest score and map back to the spin index. No trial LPs; all exact search bounds and pruning are unchanged."
+
+[benchmark.eval]
+test = "16 unseen graphs: n=22, m=52, seed=3026"
+policies = ["most-frac", "strong", "neural"]
+evidence = "Compare every exact energy with a separate HiGHS MILP oracle. Record actual nodes, LP solves, trial solves, total/LP/feature-plus-inference time, full traces and first two split indices. Oracle and model probe checks are outside search timers."
+checks = "Energy error <=1e-6; most-frac/neural LP solves equal explored nodes; six JAX/Rust probability errors <1e-4; neural uses fewer mean nodes than most-frac. Save actual evidence even if the learned policy fails to reduce nodes."
+
+[writes.labels]
+"<out>/dataset.json" = "Graph IDs and seeds; candidates, features, gains, scores, pruned-child counts and original parent LP state for every exported node"
+
+[writes.eval]
+"<out>/run.json" = "Measured three-policy results on identical unseen graphs and all validation summaries"
+"<out>/parity.json" = "Six-probe maximum probability and logit differences between JAX and Rust"
+# WEEK12_PART3_END

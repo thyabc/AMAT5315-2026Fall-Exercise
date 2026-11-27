@@ -82,3 +82,52 @@ Those are development checks, not the assignment's formal benchmark results.
 The two official 48-instance runs and their reported times remain to be
 computed on the user's own computer by run_part2.sh.
 <!-- WEEK12_PART2_END -->
+
+<!-- WEEK12_PART3_BEGIN -->
+## Part 3: DeepSeek review of learning and inference excerpts
+
+On 2026-11-27 ChatGPT sent the displayed feature formulas, label-export contract,
+JAX network/loss/Adam code, checkpoint rule, model/probe schema and Rust inference
+contract to DeepSeek in the same review conversation:
+https://chat.deepseek.com/a/chat/s/fc47b89b-c851-4ed2-a26b-c7409e906862
+
+Scope: independent static review of the supplied excerpts and interface
+contracts. DeepSeek did not run the programs or review the entire source tree.
+Its response reported no definite error in those excerpts and identified five
+risks. The following are paraphrases and checked dispositions, not test claims
+made by DeepSeek:
+
+1. **Bond-gap meaning.** The expression involving 0.5*(1-s_i*s_j) is not an LP
+   constraint-violation measure at fractional x. We retain it because it is the
+   feature explicitly defined by the learning sheet; the formula is documented
+   exactly and independently recomputed in Python.
+2. **Dual scale and bond bias.** The excerpt omitted the dual-scale assignment.
+   Full Rust code uses max(1e-9,max|row_dual|), and bond bias counts the signs of
+   incident J, as specified. The feature check and hand-computed unit example
+   cover these definitions.
+3. **Policy-state distribution shift.** Training/validation labels come from
+   Strong states, whereas deployment states and incumbents come from neural
+   search. This is a limitation of imitation learning, not train/test leakage.
+   The script preserves the required instance split and train-only statistics,
+   then evaluates the fixed checkpoint on separately seeded unseen graphs.
+4. **Masked padding and Adam.** Padding is finite zero after standardization,
+   masks are boolean, each recorded node has at least two real candidates, and
+   padded targets are zero. A finite -1e30 masked logit avoids zero times
+   negative infinity. Adam moments start at zero; its bias-correction step
+   increments once per batch from one. Training stops on non-finite CE and
+   checks zero padded probability.
+5. **Matrix layout and exactness.** Rust computes w1[input][hidden] and the same
+   normalization, biases and tanh. Six probes compare actual probabilities and
+   record logits. Neural only chooses an eligible spin and makes no trial LPs;
+   the existing exact partition, incumbent and pruning logic are retained.
+   Non-finite model coefficients/features/scores produce an error instead of
+   allowing an unchecked argmax. A fallback is not needed to report failure
+   safely. Both branch policies remain checked against actual exact energies.
+
+ChatGPT's pre-delivery development checks passed four Rust tests and a separate
+small n=6 label/train/evaluate/plot pipeline. That pipeline ran 120 JAX epochs
+and checked six Rust/JAX probes, exact energies, no graph overlap, LP accounting
+and the figure from raw JSON. It is not a substitute for the formal n=22 local
+experiments. The bootstrap runs the formal dataset and unseen evaluation on the
+user's computer and saves the actual results, including any failed criterion.
+<!-- WEEK12_PART3_END -->

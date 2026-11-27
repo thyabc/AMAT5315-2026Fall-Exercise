@@ -1,4 +1,5 @@
 mod bnb;
+mod nn;
 use highs::{HighsModelStatus, Model, RowProblem, Sense};
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -151,26 +152,33 @@ fn metric(name: &str, value: impl std::fmt::Display, ms: f64) {
 }
 
 #[derive(Serialize)]
-struct Args { mode: String, policy: String, spins: usize, edges: usize, count: usize, seed: u64, out: PathBuf }
+struct Args { mode: String, policy: String, spins: usize, edges: usize, count: usize,
+    seed: u64, out: PathBuf, export_labels: bool, model: Option<PathBuf> }
 fn arguments() -> Result<Args> {
     let mut a = Args { mode: "gap".into(), policy: "most-frac".into(), spins: 22, edges: 52, count: 16,
-                       seed: 2026, out: "artifacts/gap".into() };
+                       seed: 2026, out: "artifacts/gap".into(), export_labels: false, model: None };
     let mut it = env::args().skip(1);
     while let Some(k) = it.next() {
         if k == "--help" {
-            println!("branchopt --mode gap|bnb --policy most-frac|strong --spins 22 --edges 52 --count 48 --seed 2026 --out artifacts/bnb_most");
+            println!("branchopt --mode gap|bnb|eval --policy most-frac|strong|neural --export-labels --model artifacts/model.json --spins 22 --edges 52 --count 48 --seed 2026 --out artifacts/bnb_strong");
             std::process::exit(0);
         }
+        if k == "--export-labels" { a.export_labels = true; continue; }
         let v = it.next().ok_or_else(|| fail(format!("missing value for {k}")))?;
         match k.as_str() {
             "--mode" => a.mode = v, "--policy" => a.policy = v, "--spins" => a.spins = v.parse()?,
             "--edges" => a.edges = v.parse()?, "--count" => a.count = v.parse()?,
             "--seed" => a.seed = v.parse()?, "--out" => a.out = v.into(),
+            "--model" => a.model = Some(v.into()),
             _ => return Err(fail(format!("unknown option {k}"))),
         }
     }
-    check(a.mode == "gap" || a.mode == "bnb", "supported modes: gap | bnb")?;
-    check(a.policy == "most-frac" || a.policy == "strong", "supported policies: most-frac | strong")?;
+    check(["gap","bnb","eval"].contains(&a.mode.as_str()), "supported modes: gap | bnb | eval")?;
+    check(["most-frac","strong","neural"].contains(&a.policy.as_str()), "unsupported branching policy")?;
+    check(!a.export_labels || (a.mode=="bnb" && a.policy=="strong" && a.count<=48),
+          "--export-labels requires bnb mode, strong policy and count<=48")?;
+    check((a.mode!="eval" && a.policy!="neural") || a.model.is_some(),
+          "neural policy and eval mode require --model")?;
     check(a.spins >= 3 && a.spins <= 10000 && a.count > 0, "invalid spins or count")?;
     check(a.edges >= a.spins && a.edges <= a.spins * (a.spins - 1) / 2,
           "edge count must be between n and n*(n-1)/2")?;
@@ -180,6 +188,7 @@ fn arguments() -> Result<Args> {
 fn main() -> Result<()> {
     let a = arguments()?;
     if a.mode == "bnb" { return bnb::run(&a); }
+    if a.mode == "eval" { return bnb::evaluate(&a); }
     let started = Instant::now();
     fs::create_dir_all(&a.out)?;
     let square = Graph { n: 4, h: vec![0.0; 4], edges: vec![

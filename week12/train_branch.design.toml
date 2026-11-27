@@ -1,0 +1,61 @@
+usage = "uv run --no-project --python 3.12 --with jax==0.12.1 python train_branch.py --dataset artifacts/bnb_strong/dataset.json --out artifacts/model.json"
+description = "Imitate Strong Branching with a shared candidate-scoring MLP"
+
+[args]
+dataset = "JSON exported by branchopt --mode bnb --policy strong --export-labels"
+out = "JSON model, train-only statistics, complete CE history, and six validation probes"
+epochs = "120 for the course experiment; smaller values are for development only"
+
+[runtime]
+python = "3.12, provisioned with uv"
+jax = "0.12.1"
+platform = "CPU"
+precision = "float64, enabled before constructing JAX arrays"
+
+[data]
+training_instance_ids = [0, 35]
+validation_instance_ids = [36, 47]
+split_ranges_are_inclusive = true
+minimum_candidates = 2
+maximum_nodes_per_instance = 80
+normalization = "Population mean/std over real candidate rows from training nodes only; denominator max(std, 1e-6). Padding is zero in standardized coordinates."
+labels = "Uniform probability on scores within 1e-9 * max(1, abs(best_score)) of the best Strong Branching score."
+feature_audit = "Independently recompute all twelve features in Python from the recorded parent LP state before training."
+
+[network]
+dimensions = [12, 48, 1]
+activation = "tanh"
+aggregation = "Masked softmax over the real candidates at each node"
+initialization = "Xavier-normal with JAX PRNGKey(2026); zero biases"
+w1_layout = "12 input rows by 48 hidden columns; Rust uses w1[input][hidden]"
+
+[optimization]
+algorithm = "Adam"
+learning_rate = 0.004
+batch_size = 64
+epochs = 120
+seed = 2026
+beta1 = 0.9
+beta2 = 0.999
+epsilon = 1e-8
+weight_l2 = 0.0002
+regularize_biases = false
+objective = "Mean node cross-entropy + 0.0002 * (sum(w1^2) + sum(w2^2))"
+shuffle = "numpy default_rng(2026), a new permutation each epoch"
+checkpoint = "Lowest validation cross-entropy among epoch 1 and every fifth epoch; no test-driven selection"
+history = "Training and validation cross-entropy without L2 after every epoch, including an initial epoch 0"
+
+[validation]
+probe_count = 6
+maximum_probability_error = 0.0001
+search_energy_tolerance = 0.000001
+test = "16 unseen graphs with n=22, m=52, seed=3026"
+policies = ["most-frac", "strong", "neural"]
+require_neural_nodes_below_most_frac = true
+neural_lp_solves = "Equal explored nodes; no Strong trial solves"
+
+[writes]
+"artifacts/model.json" = "Best model, feature names, train statistics, history, probes, provenance and software environment"
+"artifacts/eval_test/run.json" = "Actual exact-search evidence on unseen graphs"
+"artifacts/eval_test/part3_checks.json" = "Explicit pass/fail criteria, measured summaries and largest node saving"
+"artifacts/neural_bnb.png" = "Cross-entropy history and independently sorted explored-node curves"
